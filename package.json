@@ -1,0 +1,14 @@
+{
+  "name": "webrtc-mini",
+  "version": "1.0.0",
+  "description": "Mini projet WebRTC video P2P avec signalisation WebSocket",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.18.0",
+    "nanoid": "^5.0.7"
+  }
+}

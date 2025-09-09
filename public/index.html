@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mini WebRTC P2P</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body>
+    <header class="topbar">
+        <h1>Mini WebRTC — Appel vidéo P2P</h1>
+    </header>
+
+    <main class="container">
+        <section class="panel">
+            <div class="controls">
+                <button id="btnCreate" class="btn">Créer une room</button>
+                <div class="input-wrap">
+                    <input id="roomIdInput" placeholder="ID de room" />
+                </div>
+                <button id="btnJoin" class="btn">Rejoindre</button>
+                <span class="spacer"></span>
+                <button id="btnHangup" class="btn btn-danger" disabled>Raccrocher</button>
+            </div>
+            <p id="status" class="status">Prêt.</p>
+        </section>
+
+        <section class="videos">
+            <!-- Carte locale -->
+            <div class="video-card">
+                <div class="video-header">
+                    <h3>Moi (local)</h3>
+                    <span class="badge" id="localIndicators"></span>
+                </div>
+                <div class="video-wrap">
+                    <video id="localVideo" autoplay playsinline muted></video>
+                    <div class="overlay" id="localCamOffOverlay">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                                d="M17 10.5V7a2 2 0 0 0-2-2H6.82l10.68 10.68c.3-.36.5-.83.5-1.34v-1.84l3.29 3.29a1 1 0 0 0 1.71-.7V7.45a1 1 0 0 0-1.71-.7L17 10.5Zm3.78 11.72L1.78 3.22 3.22 1.78l19 19-1.44 1.44Z" />
+                        </svg>
+                        <span>Caméra coupée</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modèle de carte pour les participants distants -->
+            <template id="remote-template">
+                <div class="video-card" data-peer="">
+                    <div class="video-header">
+                        <h3><span class="peer-label">Remote</span></h3>
+                        <span class="badge indicators"></span>
+                    </div>
+                    <div class="video-wrap">
+                        <video autoplay playsinline></video>
+                        <div class="overlay">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path
+                                    d="M17 10.5V7a2 2 0 0 0-2-2H6.82l10.68 10.68c.3-.36.5-.83.5-1.34v-1.84l3.29 3.29a1 1 0 0 0 1.71-.7V7.45a1 1 0 0 0-1.71-.7L17 10.5Zm3.78 11.72L1.78 3.22 3.22 1.78l19 19-1.44 1.44Z" />
+                            </svg>
+                            <span>Caméra coupée (remote)</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+
+            <!-- Grille dynamique des remotes -->
+            <div id="remotes" class="remotes-grid"></div>
+        </section>
+    </main>
+
+    <!-- Barre d'appel façon Discord -->
+    <footer class="callbar">
+        <div class="call-controls">
+            <button id="btnMic" class="icon-btn" aria-pressed="false" aria-label="Basculer micro (M)">
+                <span class="icon">🎤</span>
+                <span class="label">Micro</span>
+            </button>
+            <button id="btnCam" class="icon-btn" aria-pressed="false" aria-label="Basculer caméra (V)">
+                <span class="icon">📷</span>
+                <span class="label">Caméra</span>
+            </button>
+        </div>
+    </footer>
+
+    <script src="/app.js"></script>
+</body>
+
+</html>
