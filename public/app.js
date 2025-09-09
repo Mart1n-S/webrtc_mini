@@ -124,7 +124,7 @@ function sendSignal(type, payload = {}) {
 }
 
 /**
- * Envoi ciblé à un peer spécifique (si le serveur route via payload.to).
+ * Envoi ciblé à un peer spécifique.
  * @param {string} type
  * @param {string} to
  * @param {object} payload
@@ -196,35 +196,6 @@ function createRemoteCard(peerId) {
   if (tpl && tpl.content && tpl.content.firstElementChild) {
     // Clone le modèle
     card = tpl.content.firstElementChild.cloneNode(true);
-  } else {
-    // Fallback si le template n'existe pas (rare) : on délègue au builder JS existant
-    // --- BEGIN fallback minimal ---
-    const _card = document.createElement("div");
-    _card.className = "video-card";
-    const header = document.createElement("div");
-    header.className = "video-header";
-    const h3 = document.createElement("h3");
-    const peerLabel = document.createElement("span");
-    peerLabel.className = "peer-label";
-    h3.appendChild(peerLabel);
-    const indicators = document.createElement("span");
-    indicators.className = "badge indicators";
-    header.appendChild(h3);
-    header.appendChild(indicators);
-    const wrap = document.createElement("div");
-    wrap.className = "video-wrap";
-    const v = document.createElement("video");
-    v.autoplay = true;
-    v.playsInline = true;
-    const overlay = document.createElement("div");
-    overlay.className = "overlay";
-    overlay.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 10.5V7a2 2 0 0 0-2-2H6.82l10.68 10.68c.3-.36.5-.83.5-1.34v-1.84l3.29 3.29a1 1 0 0 0 1.71-.7V7.45a1 1 0 0 0-1.71-.7L17 10.5Zm3.78 11.72L1.78 3.22 3.22 1.78l19 19-1.44 1.44Z"/></svg><span>Caméra coupée (remote)</span>`;
-    wrap.appendChild(v);
-    wrap.appendChild(overlay);
-    _card.appendChild(header);
-    _card.appendChild(wrap);
-    card = _card;
-    // --- END fallback minimal ---
   }
 
   // Récupère les éléments utiles
