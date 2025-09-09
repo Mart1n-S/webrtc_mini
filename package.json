@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "nanoid": "^5.0.7",
+    "gridstack": "^12.3.3",
+    "nanoid": "^3.3.11",
     "twig": "^1.17.1",
     "ws": "^8.18.0"
   }
