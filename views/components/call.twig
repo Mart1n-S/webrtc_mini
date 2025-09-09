@@ -1,0 +1,35 @@
+{% import "macros/cards.twig" as cards %}
+
+<aside class="wb-sidebar">
+	<div class="call-panel">
+		<div class="call-header">
+			<h2>Appel</h2>
+			<div class="call-actions">
+				<button id="btnMic" class="icon-btn" aria-pressed="false" title="Micro (M)">🎤</button>
+				<button id="btnCam" class="icon-btn" aria-pressed="false" title="Caméra (V)">📷</button>
+				<button id="btnHangup" class="icon-btn danger" disabled title="Raccrocher">⛔</button>
+			</div>
+		</div>
+
+		<div class="room-controls">
+			<button id="btnCreate" class="btn btn-sm">Créer</button>
+			<input id="roomIdInput" class="input-sm" placeholder="ID room"/>
+			<button id="btnJoin" class="btn btn-sm">Rejoindre</button>
+		</div>
+		<p id="status" class="status status--sm">Prêt.</p>
+
+		<div class="participants">
+			<div
+				id="participants" class="participants-remotes">
+				{# Les cartes remotes s’ajoutent ici côté JS #}
+				<div class="participants-local">
+					{{ cards.video_card('', true) }}
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+	{# Template clonable pour remotes #}
+	{% include "partials/remote-template.twig" %}
+</aside>

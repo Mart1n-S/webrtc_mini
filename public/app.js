@@ -33,7 +33,9 @@ const localIndicators = document.getElementById("localIndicators");
 const localCamOffOverlay = document.getElementById("localCamOffOverlay");
 
 // Conteneur où l'on ajoute les cartes vidéo distantes
-const remotesContainer = document.getElementById("remotes");
+const remotesContainer =
+  document.getElementById("participants") || // sidebar whiteboard
+  document.getElementById("remotes"); // ancienne page call
 
 //////////////////////////////////////
 // État applicatif                  //
@@ -51,6 +53,10 @@ let isHost = false;
 // États toggles (micro / caméra)
 let isMicOn = true;
 let isCamOn = true;
+
+// États de la room et de la connexion
+let inRoom = false; // vrai dès qu'on a rejoint (JOINED)
+let joining = false; // anti double-clic pendant la tentative
 
 // ---- Multi participants ----
 /** Map<peerId, RTCPeerConnection> */
@@ -163,7 +169,6 @@ function renderLocalIndicators() {
   if (!localIndicators) return;
   const items = [];
   if (!isMicOn) items.push("🔇 Micro coupé");
-  if (!isCamOn) items.push("📷 Caméra off");
   localIndicators.innerHTML = items.join(" · ");
 }
 
@@ -230,7 +235,6 @@ function renderRemoteMedia(peerId) {
   if (!ui) return;
   const parts = [];
   if (!state.mic) parts.push("🔇 Micro (remote)");
-  if (!state.cam) parts.push("📷 Caméra (remote)");
   ui.indicators.textContent = parts.join(" · ");
   ui.overlay.classList.toggle("show", !state.cam);
 }
@@ -357,6 +361,11 @@ function cleanup(opts = {}) {
   // Reset des états UI des toggles (local)
   isMicOn = true;
   isCamOn = true;
+
+  inRoom = false;
+  joining = false;
+  btnCreate.disabled = false;
+  btnJoin.disabled = false;
   setBtnActive(btnMic, false);
   setBtnActive(btnCam, false);
   showCamOverlay(false);
@@ -410,6 +419,13 @@ async function onSignalMessage(ev) {
   if (type === MSG.JOINED) {
     const { roomSize, clientId, peers = [] } = payload || {};
     localClientId = clientId;
+
+    inRoom = true;
+    joining = false;
+
+    // Verrouiller les boutons pour éviter un second join sur la même socket
+    btnCreate.disabled = true;
+    btnJoin.disabled = true;
     log(
       `${
         isHost ? "Room créée" : "Rejoint la room"
@@ -666,6 +682,12 @@ function toggleCam() {
 //////////////////////////////////////
 
 btnCreate.addEventListener("click", async () => {
+  if (inRoom || joining) {
+    log("Tu es déjà dans une room.");
+    return;
+  }
+  joining = true;
+
   // roomId simple (6 chiffres)
   roomId = Math.random().toString().slice(2, 8);
   roomIdInput.value = roomId;
@@ -676,6 +698,7 @@ btnCreate.addEventListener("click", async () => {
     await startCallAsHost();
     sendSignal(MSG.JOIN);
   } catch (err) {
+    joining = false;
     console.error("Erreur création de room", err);
     log("Impossible de créer la room.");
     cleanup({ closeWs: true });
@@ -685,8 +708,14 @@ btnCreate.addEventListener("click", async () => {
 });
 
 btnJoin.addEventListener("click", async () => {
-  roomId = roomIdInput.value.trim();
-  if (!roomId) return alert("Saisis un ID de room.");
+  if (inRoom || joining) {
+    log("Tu es déjà dans une room.");
+    return;
+  }
+  const val = roomIdInput.value.trim();
+  if (!val) return alert("Saisis un ID de room.");
+  roomId = val;
+  joining = true;
   uiSetBusy(true);
 
   try {
@@ -694,6 +723,7 @@ btnJoin.addEventListener("click", async () => {
     await startCallAsGuest();
     sendSignal(MSG.JOIN);
   } catch (err) {
+    joining = false;
     console.error("Erreur join room", err);
     log("Impossible de rejoindre la room.");
     cleanup({ closeWs: true });

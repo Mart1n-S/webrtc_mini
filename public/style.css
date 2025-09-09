@@ -1,3 +1,6 @@
+/* =========================================================
+   Variables & Reset
+   ========================================================= */
 :root {
     --bg: #0f141a;
     --panel: #151b23;
@@ -26,6 +29,9 @@ body {
     font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
+/* =========================================================
+   Topbar & Container
+   ========================================================= */
 .topbar {
     padding: 16px 20px;
     border-bottom: 1px solid var(--border);
@@ -38,211 +44,131 @@ body {
     font-weight: 600;
 }
 
-.container {
-    max-width: 1100px;
-    margin: 24px auto;
+.container.container--full {
+    max-width: 100%;
+    margin: 24px 0;
     padding: 0 16px;
 }
 
-.panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, .25);
+/* =========================================================
+   Workspace Layout (Whiteboard + Call Sidebar)
+   ========================================================= */
+.wb-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 420px;
+    /* board | sidebar */
+    gap: 16px;
+    min-height: calc(100vh - 120px);
 }
 
-.controls {
+.wb-layout--full {
+    gap: 0;
+}
+
+/* =========================================================
+   Whiteboard (gauche)
+   ========================================================= */
+.wb-board {
+    background: #0f1115;
+    border: 1px solid #1e2230;
+    border-radius: 12px;
     display: flex;
-    gap: 10px;
+    flex-direction: column;
+}
+
+.wb-toolbar {
+    display: flex;
+    gap: 8px;
     align-items: center;
-    flex-wrap: wrap;
+    padding: 8px;
+    border-bottom: 1px solid #1e2230;
+    background: #0b0d12;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.tbtn {
+    padding: 6px 10px;
+    border: 1px solid #2a2f3f;
+    border-radius: 8px;
+    background: #131826;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.tbtn:hover {
+    background: #182036;
+}
+
+.tbtn--primary {
+    border-color: #3758ff;
 }
 
 .spacer {
     flex: 1;
 }
 
-.input-wrap {
+.wb-canvas {
+    flex: 1;
+    position: relative;
+    outline: none;
+}
+
+/* =========================================================
+   Sidebar Appel (droite)
+   ========================================================= */
+.wb-sidebar {
     display: flex;
-    align-items: center;
-    background: #0e1621;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 6px 10px;
-    min-width: 220px;
-}
-
-.input-wrap input {
-    border: 0;
-    outline: 0;
-    width: 100%;
+    flex-direction: column;
+    border-left: 1px solid var(--border);
     background: transparent;
-    color: var(--text);
-    font-size: 14px;
 }
 
-.btn {
-    background: #1a2330;
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: .15s transform ease, .15s background ease;
+.call-panel {
+    background: #0f1115;
+    border: 1px solid #1e2230;
+    border-radius: 0;
+    /* collé au bord droit */
+    border-left: none;
+    min-height: calc(100vh - 120px);
+    padding: 12px;
 }
 
-.btn:hover {
-    background: #202a39;
-    transform: translateY(-1px);
-}
-
-.btn:active {
-    transform: translateY(0);
-}
-
-.btn[disabled] {
-    opacity: .6;
-    cursor: not-allowed;
-}
-
-.btn-danger {
-    background: #2a1517;
-    border-color: #4b1d21;
-}
-
-.btn-danger:hover {
-    background: #3a1c20;
-}
-
-.status {
-    margin: 8px 4px 0;
-    color: var(--muted);
-}
-
-.videos {
-    display: grid;
-    height: fit-content;
-    gap: 14px;
-    margin-top: 14px;
-    grid-template-columns: 1fr 1fr;
-}
-
-.video-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    overflow: hidden;
-}
-
-.video-header {
+.call-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
 }
 
-.video-header h3 {
-    margin: 0;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.badge {
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-    color: var(--muted);
-    font-size: 12px;
-}
-
-.video-wrap {
-    position: relative;
-    background: #0b1117;
-    min-height: 240px;
-}
-
-video {
-    width: 100%;
-    height: 420px;
-    object-fit: cover;
-    display: block;
-    background: #0b1117;
-}
-
-.overlay {
-    position: absolute;
-    inset: 0;
-    display: none;
-    place-items: center;
-    background: rgba(10, 13, 18, .6);
-    color: #dfe7ef;
-    font-weight: 600;
-    gap: 10px;
-}
-
-.overlay svg {
-    width: 40px;
-    height: 40px;
-    fill: #dfe7ef;
-    opacity: .9;
-}
-
-.overlay.show {
-    display: grid;
-}
-
-/* Call bar façon Discord */
-.callbar {
-    position: sticky;
-    bottom: 0;
-    margin-top: 24px;
-    background: rgba(10, 14, 19, .8);
-    backdrop-filter: blur(6px);
-    border-top: 1px solid var(--border);
-    padding: 10px 16px;
-}
-
-.call-controls {
+.call-actions {
     display: flex;
-    gap: 12px;
-    align-items: center;
+    gap: 8px;
 }
 
 .icon-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    background: #131a23;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #2a2f3f;
+    background: #131826;
     color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 10px 12px;
-    min-width: 70px;
     cursor: pointer;
+    display: grid;
+    place-items: center;
     transition: .15s background ease, .15s transform ease, .15s border-color ease;
 }
 
-.icon-btn .icon {
-    font-size: 18px;
-    line-height: 18px;
-}
-
-.icon-btn .label {
-    font-size: 12px;
-    color: var(--muted);
-}
-
 .icon-btn:hover {
-    background: #182131;
+    background: #182036;
     transform: translateY(-1px);
 }
 
-.icon-btn.active {
-    border-color: #345bff;
-    background: rgba(52, 91, 255, .12);
+.icon-btn[aria-pressed="true"] {
+    border-color: #3758ff;
+    background: rgba(55, 88, 255, .12);
 }
 
 .icon-btn.danger {
@@ -255,19 +181,137 @@ video {
     cursor: not-allowed;
 }
 
-.remotes-grid {
-    display: grid;
-    gap: 14px;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+.room-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
+.btn.btn-sm {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #2a2f3f;
+    background: #131826;
+    color: var(--text);
+    cursor: pointer;
+}
 
-@media (max-width: 900px) {
-    .videos {
+.input-sm {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: 1px solid #2a2f3f;
+    background: #0b0d12;
+    color: #fff;
+}
+
+.status {
+    margin: 8px 4px 0;
+    color: var(--muted);
+}
+
+.status--sm {
+    font-size: 12px;
+    opacity: .8;
+    margin: 6px 0 10px;
+}
+
+/* =========================================================
+   Cartes vidéo (local + remotes)
+   ========================================================= */
+.participants {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.video-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.video-card .video-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.video-card .video-header h3 {
+    margin: 0;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.video-card .badge {
+    font-size: 11px;
+    color: var(--muted);
+}
+
+.video-card .video-wrap {
+    position: relative;
+    background: #000;
+}
+
+.video-card video {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    display: block;
+    background: #000;
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, .5);
+    color: #fff;
+    font-size: 12px;
+}
+
+.overlay.show {
+    display: flex;
+}
+
+.overlay svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Grille remotes : 2 vignettes par ligne */
+.participants-remotes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    overflow: auto;
+    max-height: calc(100vh - 360px);
+    padding-right: 4px;
+}
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+@media (max-width: 1024px) {
+    .wb-layout {
         grid-template-columns: 1fr;
     }
 
-    video {
-        height: 320px;
+    .call-panel {
+        border-left: 1px solid var(--border);
+        border-radius: 12px;
+        min-height: auto;
+    }
+
+    .participants-remotes {
+        grid-template-columns: 1fr;
     }
 }

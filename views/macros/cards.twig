@@ -1,0 +1,36 @@
+{# === Macro unique: carte vidéo locale ou distante === #}
+{% macro video_card(peer_id='', is_local=false) %}
+	<div class="video-card{% if is_local %} video-card--local{% endif %}" {% if not is_local and peer_id %} data-peer="{{ peer_id }}" {% endif %}>
+
+		<div class="video-header">
+			<h3>
+				{% if is_local %}
+					Moi (local)
+				{% else %}
+					<span class="peer-label">Remote
+						{% if peer_id %}
+							({{ peer_id|slice(0,6) }})
+						{% endif %}
+					</span>
+				{% endif %}
+			</h3>
+
+			{# badge d'état: id spécifique en local, classe générique en remote #}
+			<span class="badge {% if not is_local %}indicators{% endif %}" {% if is_local %} id="localIndicators" {% endif %}></span>
+		</div>
+
+		<div class="video-wrap">
+			<video {% if is_local %} id="localVideo" muted {% endif %} autoplay playsinline></video>
+
+			<div class="overlay" {% if is_local %} id="localCamOffOverlay" {% endif %}>
+				<svg viewbox="0 0 24 24" aria-hidden="true">
+					<path fill="currentColor" d="M17 10.5V7a2 2 0 0 0-2-2H6.82l10.68 10.68c.3-.36.5-.83.5-1.34v-1.84l3.29 3.29a1 1 0 0 0 1.71-.7V7.45a1 1 0 0 0-1.71-.7L17 10.5Zm3.78 11.72L1.78 3.22 3.22 1.78l19 19-1.44 1.44Z"/>
+				</svg>
+				<span>
+					{% if is_local %}Caméra coupée{% else %}Caméra coupée (remote)
+					{% endif %}
+				</span>
+			</div>
+		</div>
+	</div>
+{% endmacro %}

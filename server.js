@@ -17,6 +17,8 @@ const express = require("express");
 const { WebSocketServer } = require("ws");
 const { nanoid } = require("nanoid");
 const http = require("http");
+const path = require("path");
+const twig = require("twig");
 
 ///////////////////////////////
 // Constantes de configuration
@@ -166,7 +168,18 @@ function validateIncoming(msg) {
 ///////////////////////////////
 
 const app = express();
-app.use(express.static("public"));
+// Vue engine Twig
+app.set("views", path.join(__dirname, "views"));
+app.set("view engine", "twig");
+app.engine("twig", twig.__express);
+
+// Route HTML principale rendue via Twig
+app.get("/", (req, res) => {
+  res.render("workspace", { title: "Whiteboard + Call" });
+});
+
+// Statique (JS/CSS/images). Désactive l’index.html implicite pour laisser Twig gérer "/"
+app.use(express.static("public", { index: false }));
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: WS_PATH });
