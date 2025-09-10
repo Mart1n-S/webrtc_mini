@@ -62,6 +62,9 @@ const MSG = {
   ICE: "ice-candidate",
   ERROR: "error",
   MEDIA: "media-state",
+  WB_APPLY: "wb-apply",          // opération à appliquer (add/update/remove/note/draw)
+  WB_REQUEST: "wb-request",      // demander un snapshot
+  WB_SNAPSHOT: "wb-snapshot",    // envoyer un snapshot complet
 };
 
 ///////////////////////////////////
@@ -334,8 +337,7 @@ wss.on("connection", (ws) => {
     if (!joinedRoomId) return;
 
     // --- Signalisation relai ---
-    if ([MSG.OFFER, MSG.ANSWER, MSG.ICE, MSG.MEDIA].includes(type)) {
-      const targetId = payload?.to || null;
+if ([MSG.OFFER, MSG.ANSWER, MSG.ICE, MSG.MEDIA, MSG.WB_APPLY, MSG.WB_REQUEST, MSG.WB_SNAPSHOT].includes(type)) {      const targetId = payload?.to || null;
       const message = { type, payload: { ...payload, from: clientId } };
 
       if (targetId) {
@@ -413,3 +415,4 @@ server.listen(PORT, () => {
     `✅ Server running on http://localhost:${PORT} (ws path: ${WS_PATH})`
   );
 });
+

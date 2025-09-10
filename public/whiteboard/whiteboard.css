@@ -1,0 +1,225 @@
+:root {
+  --bg:#0f1218; 
+  --panel:#111723; 
+  --muted:#1b2332; 
+  --border:#263041;
+  --text:#d9e1f1; 
+  --accent:#3b82f6; 
+  --accent-2:#60a5fa;
+  --note:#fff9a9; 
+  --note-border:#e2d77a;
+  --radius:12px; 
+  --shadow:0 10px 30px rgba(0,0,0,.28);
+
+  /* réservé dynamiquement par JS pour ne pas mordre sur la sidebar */
+  --right-pane: 0px;
+}
+
+* { box-sizing:border-box; }
+html, body {
+  height:100%; 
+  margin:0; 
+  background:var(--bg); 
+  color:var(--text); 
+  font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+
+/* ===== Layout global ===== */
+.main {
+  display:flex;
+  height:100vh;
+  width:100vw;
+  gap:12px;
+  padding:12px;
+  padding-right: var(--right-pane); /* espace réservé pour la sidebar */
+  overflow:hidden;
+}
+
+/* Colonne gauche = whiteboard */
+.wb-col {
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  min-width:0;
+}
+
+/* ===== Toolbar ===== */
+.wb-toolbar {
+  display:flex; gap:8px; align-items:center;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:10px;
+  box-shadow:var(--shadow);
+}
+.spacer { flex:1; }
+.btn { 
+  padding:8px 12px; border-radius:10px; border:1px solid var(--border); 
+  background:var(--muted); color:var(--text); cursor:pointer; transition:.15s; 
+  display:inline-flex; gap:8px; align-items:center; 
+}
+.btn:hover { filter:brightness(1.08); }
+.btn.is-active { outline:2px solid var(--accent); }
+.btn--primary { background:var(--accent); border-color:var(--accent); }
+.btn--primary:hover { background:var(--accent-2); border-color:var(--accent-2); }
+
+/* ===== Board ===== */
+.wb-canvas {
+  flex:1 1 auto;
+  min-height:0;
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  position:relative;
+  overflow:hidden;
+  display:flex;
+}
+
+.grid-stack {
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0;
+  width:100%;
+  height:100%;
+  padding:12px;
+}
+
+/* ===== Post-its ===== */
+.grid-stack-item-content.note {
+  background:var(--note);
+  border:1px solid var(--note-border);
+  border-radius:12px;
+  color:#2a2a2a;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.note__header { 
+  height:34px; display:flex; align-items:center; justify-content:space-between; 
+  padding:0 10px; background:rgba(0,0,0,.06); 
+  border-bottom:1px dashed rgba(0,0,0,.12); 
+  cursor:grab; user-select:none; 
+}
+.note__header:active { cursor:grabbing; }
+.note__title { font-weight:600; font-size:12px; opacity:.7; }
+.note__actions { display:flex; gap:6px; }
+.chip { 
+  height:22px; padding:0 8px; border-radius:999px; font-size:11px; 
+  background:#ffe67a; border:1px solid #e2d77a; 
+  display:inline-flex; align-items:center; 
+}
+.icon-btn { 
+  width:26px; height:26px; display:grid; place-items:center; 
+  border-radius:8px; border:1px solid rgba(0,0,0,.08); 
+  background:transparent; cursor:pointer; font-size:16px; color:#333; 
+}
+.icon-btn:hover { background:rgba(0,0,0,.06); }
+.note__body { padding:10px; flex:1; overflow:auto; outline:none; font-size:14px; }
+.note.is-selected { box-shadow:0 0 0 2px var(--accent) inset; }
+
+.ui-resizable-handle { background:transparent; border:none; }
+.ui-resizable-se { 
+  width:14px; height:14px; right:4px; bottom:4px; 
+  background:linear-gradient(135deg, rgba(0,0,0,.25), rgba(0,0,0,0)); 
+  border-radius:3px; 
+}
+
+/* fallback si écran étroit */
+@media (max-width: 1100px){
+  :root { --right-pane: 0px; }
+}
+
+/* ---- Widgets génériques (header commun) ---- */
+.w-header{
+  height:34px; display:flex; align-items:center; justify-content:space-between;
+  padding:0 10px; background:rgba(0,0,0,.06);
+  border-bottom:1px dashed rgba(0,0,0,.12);
+  cursor:grab; user-select:none;
+}
+.w-header:active{ cursor:grabbing; }
+.w-title{ font-weight:600; font-size:12px; opacity:.7; }
+.w-actions{ display:flex; gap:6px; }
+.w-close{ width:26px;height:26px;display:grid;place-items:center;border-radius:8px;
+  border:1px solid rgba(0,0,0,.08); background:transparent; cursor:pointer; font-size:16px; color:#333; }
+.w-close:hover{ background:rgba(0,0,0,.06); }
+
+/* ---- Bloc dessin ---- */
+.drawpad{
+  background:#0f1522; color:#cfe0ff; border:1px solid #20304b;
+  border-radius:12px; display:flex; flex-direction:column; overflow:hidden;
+}
+.drawpad__toolbar{
+  display:flex; gap:8px; align-items:center; padding:6px 10px;
+  border-top:1px dashed rgba(255,255,255,.08);
+}
+.dp-btn{
+  padding:6px 10px; border-radius:8px; border:1px solid #2a3b57; background:#152036; color:#cfe0ff;
+  cursor:pointer; font-size:12px;
+}
+.dp-btn:hover{ filter:brightness(1.05); }
+.drawpad__canvas{
+  width:100%; height:100%; flex:1; background:#0b1220; touch-action:none; /* évite le scroll en dessin */
+}
+
+    .wb-canvas {
+  position: relative;
+  overflow: hidden;
+  outline: none;
+}
+
+.note {
+  position: absolute;
+  min-width: 140px;
+  min-height: 120px;
+  background: #fff9a9;            /* jaune post-it */
+  border: 1px solid #e2d77a;
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.12);
+  user-select: none;
+}
+
+.note__header {
+  height: 28px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: grab;                   /* poignée de drag */
+  border-bottom: 1px dashed rgba(0,0,0,.12);
+  background: rgba(0,0,0,.04);
+  border-radius: 8px 8px 0 0;
+}
+
+.note__header:active { cursor: grabbing; }
+
+.note__title {
+  font: 600 12px/1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  opacity: .7;
+}
+
+.note__close {
+  font-size: 14px;
+  line-height: 1;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  opacity: .6;
+}
+
+.note__body {
+  padding: 10px;
+  font: 14px/1.25 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  outline: none;                   /* évite le halo contenteditable */
+  caret-color: #333;
+  user-select: text;
+}
+
+.note.is-selected {
+  box-shadow: 0 0 0 2px #4093ff, 0 6px 20px rgba(0,0,0,.12);
+}
+
+.note.is-dragging {
+  opacity: .92;
+  transition: none !important;
+}

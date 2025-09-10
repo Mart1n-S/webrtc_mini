@@ -1,13 +1,37 @@
-<section class="wb-board">
-	<div class="wb-toolbar">
-		<button class="tbtn" data-tool="select">🖱️ Sélection</button>
-		<button class="tbtn" data-tool="note">🗒️ Post-it</button>
-		<button class="tbtn" data-tool="pen">✏️ Stylo</button>
-		<button class="tbtn" data-tool="erase">🧽 Gomme</button>
-		<div class="spacer"></div>
-		<button class="tbtn tbtn--primary" id="btnShare">Partager le lien</button>
-	</div>
-	<div
-		id="board" class="wb-canvas" tabindex="0" aria-label="Whiteboard"><!-- Post-its & dessins viendront ici -->
-	</div>
-</section>
+<!doctype html>
+<html lang="fr">
+	<head>
+		<meta charset="utf-8"/>
+		<title>Whiteboard + Call</title>
+		<meta
+		name="viewport" content="width=device-width, initial-scale=1"/>
+
+		<!-- GridStack (LOCAL) -->
+		<link rel="stylesheet" href="/libs/gridstack/gridstack.min.css">
+		<script src="/libs/gridstack/gridstack-all.js"></script>
+
+		<!-- Styles du whiteboard -->
+		<link rel="stylesheet" href="/whiteboard/whiteboard.css">
+	</head>
+	<body>
+		<div
+			class="main">
+			<!-- Colonne gauche : whiteboard -->
+			<div class="wb-col">
+				<div class="wb-toolbar">
+					<button class="btn is-active" data-tool="select">🖱️ Sélection</button>
+					<button class="btn" data-tool="note">🗒️ Post-it</button>
+					<button class="btn" data-tool="draw">🖌️ Bloc dessin</button>
+					<div class="spacer"></div>
+					<button class="btn btn--primary" id="btnShare">Partager le lien</button>
+					<button class="btn" id="btnClear">Vider</button>
+				</div>
+				<div id="board" class="wb-canvas">
+					<div class="grid-stack" aria-label="Whiteboard"></div>
+				</div>
+			</div>
+			<!-- JS du whiteboard (modules ES) -->
+			<script type="module" src="/whiteboard/whiteboard.js"></script>
+		</body>
+	</body>
+</html>
