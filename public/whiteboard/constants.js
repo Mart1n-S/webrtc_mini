@@ -24,4 +24,15 @@ export const NOTE_COLORS = [
   { bg: '#ffd6a9', border: '#e2a97a' },
 ];
 
-export const LS_KEY = 'whiteboard:grid:v2'; // v2 car on stocke aussi des dessins (dataURL)
+// v3 car collaboration (structure sauv modifiée)
+export const LS_KEY = 'whiteboard:grid:v3';
+
+export const WS_PATH = '/ws';
+
+// util: room depuis l’URL (hash ou query), sinon "demo"
+export function getRoomId() {
+  const url = new URL(window.location.href);
+  const q = url.searchParams.get('room');
+  const h = url.hash?.replace(/^#/, '');
+  return (q || h || 'demo').trim();
+}

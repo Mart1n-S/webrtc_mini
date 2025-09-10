@@ -5,7 +5,7 @@ export function saveState(grid) {
   const nodes = [];
   grid.engine.nodes.forEach((n) => {
     const type = n.el.dataset.type || TYPES.NOTE;
-    const data = { x: n.x, y: n.y, w: n.w, h: n.h, type };
+    const data = { id: n.el.dataset.id, x: n.x, y: n.y, w: n.w, h: n.h, type };
 
     if (type === TYPES.NOTE) {
       const body = n.el.querySelector('.note__body');
