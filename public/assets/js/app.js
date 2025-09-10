@@ -603,6 +603,12 @@ async function onSignalMessage(ev) {
  * @returns {Promise<void>}
  */
 async function initLocalMedia() {
+  if (localStream && localStream.active) {
+    console.log(
+      "[APP] localStream déjà présent — pas de nouveau getUserMedia()"
+    );
+    return;
+  }
   // Astuce: demander l’audio + vidéo avant de négocier
   localStream = await navigator.mediaDevices.getUserMedia({
     video: true,
@@ -753,20 +759,41 @@ window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "v") toggleCam();
 });
 // Auto-join sur /room/:roomId (robuste si DOMContentLoaded déjà passé)
+// Empêche les doubles auto-joins (script injecté 2x, navigation, etc.)
+let __AUTOJOIN_STARTED__ = false;
+
+/**
+ * Auto-join /room/:id en évitant toute double initialisation
+ */
 async function __autoJoinInit() {
-  // Injecté par workspace.js
+  // Déjà lancé ? on ignore.
+  if (__AUTOJOIN_STARTED__ || joining || inRoom) return;
+
+  // Récupère la room (injection > query > pathname)
   const injectedRoomId = typeof window !== "undefined" ? window.ROOM_ID : null;
   const params = new URLSearchParams(location.search);
-  const rid = injectedRoomId || params.get("room");
+  let rid = injectedRoomId || params.get("room");
+  if (!rid) {
+    const m = location.pathname.match(/^\/room\/(\d{4,})/);
+    if (m) rid = m[1];
+  }
+
+  // Ne lance l’appel que si autojoin=1 (ou flag injecté)
+  const autojoin =
+    (typeof window !== "undefined" && window.AUTOJOIN === true) ||
+    params.get("autojoin") === "1";
+
   const isHostFromUrl =
     (typeof window !== "undefined" && window.IS_HOST_FROM_URL === true) ||
     params.get("host") === "1";
 
-  if (!rid) return;
+  if (!rid || !autojoin) return;
+
+  // Verrou global anti double init
+  __AUTOJOIN_STARTED__ = true;
 
   roomId = rid;
   joining = true;
-  // uiSetBusy(true);
 
   try {
     await connectWS();
@@ -777,6 +804,8 @@ async function __autoJoinInit() {
     }
     sendSignal(MSG.JOIN);
   } catch (err) {
+    // En cas d’échec, on libère le verrou pour permettre un retry éventuel
+    __AUTOJOIN_STARTED__ = false;
     joining = false;
     console.error("Auto-join error", err);
     log("Impossible de démarrer l’appel.");
