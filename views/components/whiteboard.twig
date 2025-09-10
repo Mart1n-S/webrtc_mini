@@ -1,13 +1,24 @@
-<section class="wb-board">
-	<div class="wb-toolbar">
-		<button class="tbtn" data-tool="select">🖱️ Sélection</button>
-		<button class="tbtn" data-tool="note">🗒️ Post-it</button>
-		<button class="tbtn" data-tool="pen">✏️ Stylo</button>
-		<button class="tbtn" data-tool="erase">🧽 Gomme</button>
-		<div class="spacer"></div>
-		<button class="tbtn tbtn--primary" id="btnShare">Partager le lien</button>
-	</div>
-	<div
-		id="board" class="wb-canvas" tabindex="0" aria-label="Whiteboard"><!-- Post-its & dessins viendront ici -->
+<section
+	class="main">
+	<!-- Colonne gauche : whiteboard -->
+	<div class="wb-col">
+		<div class="wb-toolbar">
+			<button class="btn" data-tool="note">
+				<img src="/assets/images/icons/create-outline.svg" alt="" aria-hidden="true"/>
+				Post-it</button>
+
+			<button class="btn" data-tool="draw"><img src="/assets/images/icons/brush-outline.svg" alt="" aria-hidden="true"/>
+				Bloc dessin</button>
+
+			<div class="spacer"></div>
+			<button class="btn btn--primary" id="btnShare"><img src="/assets/images/icons/link.svg" alt="" aria-hidden="true"/>Partager le lien</button>
+
+			<button class="btn btn--danger" id="btnClear"><img src="/assets/images/icons/trash-outline.svg" alt="" aria-hidden="true"/>Vider</button>
+
+
+		</div>
+		<div id="board" class="wb-canvas">
+			<div class="grid-stack" aria-label="Whiteboard"></div>
+		</div>
 	</div>
 </section>

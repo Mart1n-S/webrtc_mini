@@ -4,7 +4,18 @@
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>{{ title|default('Mini WebRTC') }}</title>
-		<link rel="stylesheet" href="/style.css">
+		<link rel="icon" type="image/png" href="/assets/images/icon.svg">
+
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css"> {% block head_extra %}{% endblock %}
+
+
+		<!-- GridStack (LOCAL) -->
+		<link
+		rel="stylesheet" href="/libs/gridstack/gridstack.min.css">
+
+		<!-- Styles du whiteboard -->
+		<link rel="stylesheet" href="/whiteboard/whiteboard.css">
+		<link rel="stylesheet" href="/assets/css/style.css">
 	</head>
 	<body>
 		<header class="topbar">
@@ -14,6 +25,7 @@
 		<main class="container container--full"> {% block content %}{% endblock %}
 			</main>
 
-			<script src="/app.js"></script>
+			<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+			<script src="/assets/js/app.js"></script>
 		</body>
 	</html>

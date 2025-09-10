@@ -1,0 +1,233 @@
+/* Landing page styles
+   - S'appuie sur les variables déjà définies dans /style.css (root: --bg, --text, --accent, etc.)
+   - Design sobre, hero avec blobs animés, grid d'explication rapide
+*/
+
+.lp {
+    margin: 24px 0;
+}
+
+/* ------------------ Hero ------------------ */
+.lp-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: radial-gradient(1200px 600px at 20% -10%, rgba(79, 156, 255, .10), transparent 60%),
+        radial-gradient(1000px 500px at 80% 0%, rgba(67, 209, 122, .08), transparent 60%),
+        #0f1115;
+    min-height: 56vh;
+    display: grid;
+    place-items: center;
+    padding: 48px 20px;
+}
+
+.lp-hero__bg .lp-blob {
+    position: absolute;
+    filter: blur(40px);
+    opacity: .25;
+    pointer-events: none;
+    transform: translateZ(0);
+}
+
+.lp-blob--1 {
+    width: 420px;
+    height: 420px;
+    background: #4f9cff;
+    top: -80px;
+    left: -60px;
+    animation: float1 16s ease-in-out infinite;
+}
+
+.lp-blob--2 {
+    width: 360px;
+    height: 360px;
+    background: #43d17a;
+    bottom: -80px;
+    right: -40px;
+    animation: float2 18s ease-in-out infinite;
+}
+
+@keyframes float1 {
+
+    0%,
+    100% {
+        transform: translate(0, 0)
+    }
+
+    50% {
+        transform: translate(20px, 18px)
+    }
+}
+
+@keyframes float2 {
+
+    0%,
+    100% {
+        transform: translate(0, 0)
+    }
+
+    50% {
+        transform: translate(-16px, -14px)
+    }
+}
+
+.lp-hero__content {
+    position: relative;
+    text-align: center;
+    max-width: 860px;
+    z-index: 1;
+}
+
+.lp-title {
+    margin: 0 0 10px;
+    font-size: clamp(36px, 6vw, 56px);
+    letter-spacing: .2px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.lp-subtitle {
+    margin: 0 auto 22px;
+    max-width: 820px;
+    color: var(--grey);
+    font-size: clamp(15px, 2.4vw, 18px);
+    line-height: 1.6;
+}
+
+.lp-subtitle strong {
+    color: #dce6ff;
+    font-weight: 700;
+}
+
+.lp-subtitle em {
+    opacity: .9;
+}
+
+.lp-cta {
+    margin-top: 8px;
+}
+
+.lp-btn {
+    border: 1px solid #2a2f3f;
+    background: #131826;
+    color: var(--text);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: .15s background ease, .15s transform ease, .15s border-color ease;
+}
+
+.lp-btn:hover {
+    background: #182036;
+    transform: translateY(-1px);
+}
+
+.lp-btn--primary {
+    border-color: #3758ff;
+    background: linear-gradient(180deg, rgba(55, 88, 255, .22), rgba(55, 88, 255, .08));
+}
+
+.lp-status {
+    margin-top: 10px;
+    font-size: 13px;
+    color: var(--grey);
+}
+
+/* ------------------ Steps ------------------ */
+.lp-steps {
+    margin: 26px auto 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    max-width: 880px;
+}
+
+.lp-step {
+    background: #0f1720;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 14px;
+    text-align: left;
+}
+
+.lp-step__icon {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: rgba(79, 156, 255, .18);
+    border: 1px solid rgba(79, 156, 255, .35);
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.lp-step h3 {
+    margin: 0 0 6px;
+    font-size: 16px;
+}
+
+.lp-step p {
+    margin: 0;
+    color: var(--grey);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ------------------ Features ------------------ */
+.lp-features {
+    margin: 18px 0 0;
+}
+
+.lp-features__grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.lp-features__grid li {
+    background: #0f1115;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.lp-feature__icon {
+    font-size: 18px;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.lp-features__grid h4 {
+    margin: 0 0 6px;
+    font-size: 15px;
+}
+
+.lp-features__grid p {
+    margin: 0;
+    color: var(--grey);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* ------------------ Responsive ------------------ */
+@media (max-width: 1024px) {
+    .lp-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .lp-features__grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .lp-features__grid {
+        grid-template-columns: 1fr;
+    }
+}

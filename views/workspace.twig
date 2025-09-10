@@ -1,8 +1,13 @@
 {% extends "base.twig" %}
 
 {% block content %}
-	<div class="wb-layout wb-layout--full">
+	<div id="workspaceRoot" class="wb-layout wb-layout--full" data-room-id="{{ roomId }}">
 		{% include "components/whiteboard.twig" %}
 		{% include "components/call.twig" %}
 	</div>
+
+	<script src="/assets/js/workspace.js"></script>
+	<script src="/libs/gridstack/gridstack-all.js"></script>
+	<script type="module" src="/whiteboard/whiteboard.js"></script>
+
 {% endblock %}
