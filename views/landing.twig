@@ -1,0 +1,79 @@
+{% extends "base.twig" %}
+
+{% block head_extra %}
+	<link rel="stylesheet" href="/landing.css">
+{% endblock %}
+
+{% block content %}
+	<section id="landing" class="lp">
+		<div class="lp-hero">
+			<div class="lp-hero__bg">
+				<div class="lp-blob lp-blob--1"></div>
+				<div class="lp-blob lp-blob--2"></div>
+			</div>
+
+			<div class="lp-hero__content">
+				<h1 class="lp-title">webrtc-mini</h1>
+				<p class="lp-subtitle">
+					Appels vidéo
+					<strong>P2P</strong>
+					ultra-simples avec un
+					<strong>tableau blanc</strong>
+					intégré.  
+																																																		          Pas de compte, pas de friction :
+					<em>tu crées une room, tu partages un lien</em>.
+				</p>
+
+				<div class="lp-cta">
+					<button id="ctaCreate" class="lp-btn lp-btn--primary">🚀 Créer une room</button>
+					<p id="lpStatus" class="lp-status" aria-live="polite"></p>
+				</div>
+
+				<div class="lp-steps">
+					<div class="lp-step">
+						<div class="lp-step__icon">①</div>
+						<h3>Créer</h3>
+						<p>Génère une room en un clic — aucun compte requis.</p>
+					</div>
+					<div class="lp-step">
+						<div class="lp-step__icon">②</div>
+						<h3>Partager</h3>
+						<p>Envoie le lien à tes interlocuteurs pour qu’ils rejoignent.</p>
+					</div>
+					<div class="lp-step">
+						<div class="lp-step__icon">③</div>
+						<h3>Collaborer</h3>
+						<p>Discutez en vidéo et utilisez le whiteboard en temps réel.</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<section class="lp-features">
+			<ul class="lp-features__grid">
+				<li>
+					<span class="lp-feature__icon">🔒</span>
+					<h4>P2P par défaut</h4>
+					<p>Flux médias d’égal à égal (TURN possible pour les réseaux stricts).</p>
+				</li>
+				<li>
+					<span class="lp-feature__icon">⚡</span>
+					<h4>Instantané</h4>
+					<p>Démarrage immédiat : un clic, un lien, une conversation.</p>
+				</li>
+				<li>
+					<span class="lp-feature__icon">🧽</span>
+					<h4>Whiteboard</h4>
+					<p>Un tableau simple pour esquisser des idées pendant l’appel.</p>
+				</li>
+				<li>
+					<span class="lp-feature__icon">🔗</span>
+					<h4>Partage facile</h4>
+					<p>Copie du lien intégrée pour inviter qui tu veux.</p>
+				</li>
+			</ul>
+		</section>
+	</section>
+
+	<script src="/landing.js"></script>
+{% endblock %}

@@ -19,6 +19,8 @@ const { nanoid } = require("nanoid");
 const http = require("http");
 const path = require("path");
 const twig = require("twig");
+const mongoose = require("mongoose");
+const Room = require("./models/Room");
 
 ///////////////////////////////
 // Constantes de configuration
@@ -32,6 +34,12 @@ const WS_PATH = "/ws";
 const HEARTBEAT_INTERVAL = 30_000;
 /** Taille max d'une room (0 = illimité). Pour 1:1 mets 2. */
 const MAX_ROOM_SIZE = 0;
+
+/**
+ * URI MongoDB
+ */
+const MONGODB_URI =
+  process.env.MONGODB_URI || "mongodb://localhost:27017/webrtcmini";
 
 //////////////////////////////////////
 // États & Structures de données   //
@@ -55,6 +63,17 @@ const MSG = {
   ERROR: "error",
   MEDIA: "media-state",
 };
+
+///////////////////////////////////
+// Connexion à la base de données  //
+///////////////////////////////////
+mongoose
+  .connect(MONGODB_URI, { dbName: "webrtcmini" })
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  });
 
 ///////////////////////////////
 // Helpers utilitaires       //
@@ -173,9 +192,44 @@ app.set("views", path.join(__dirname, "views"));
 app.set("view engine", "twig");
 app.engine("twig", twig.__express);
 
+// API: création d'une room via la landing
+app.post("/api/rooms/new", async (req, res) => {
+  try {
+    // Génère un ID 6 chiffres (re-essaie si collision)
+    let rid;
+    do {
+      rid = Math.random().toString().slice(2, 8);
+    } while (await Room.exists({ roomId: rid }));
+
+    await Room.create({ roomId: rid });
+
+    // URL canonique pour l’hôte
+    const url = `/room/${rid}?autojoin=1&host=1`;
+    res.json({ roomId: rid, url });
+  } catch (e) {
+    console.error("Create room error", e);
+    res.status(500).json({ error: "create_failed" });
+  }
+});
+
 // Route HTML principale rendue via Twig
 app.get("/", (req, res) => {
-  res.render("workspace", { title: "Whiteboard + Call" });
+  res.render("landing", { title: "webrtc-mini" });
+});
+
+// Workspace (nouvelle route)
+// On passe roomId au template pour auto-join côté client
+app.get("/room/:roomId", async (req, res) => {
+  const { roomId } = req.params;
+
+  // Vérifie en base
+  const exists = await Room.exists({ roomId, status: { $ne: "archived" } });
+  if (!exists) {
+    return res.redirect(`/?error=room_not_found`);
+  }
+
+  // OK → on rend la page workspace
+  res.render("workspace", { title: "Whiteboard + Call", roomId });
 });
 
 // Statique (JS/CSS/images). Désactive l’index.html implicite pour laisser Twig gérer "/"
@@ -202,7 +256,7 @@ wss.on("connection", (ws) => {
   /**
    * Réception de messages depuis le client
    */
-  ws.on("message", (data) => {
+  ws.on("message", async (data) => {
     const parsed = safeJsonParse(data);
     if (!parsed.ok) {
       return send(ws, {
@@ -224,6 +278,26 @@ wss.on("connection", (ws) => {
 
     // --- JOIN ---
     if (type === MSG.JOIN) {
+      // Vérifie en base que la room existe (empêche la création sauvage via URL/WS)
+      try {
+        const exists = await Room.exists({
+          roomId,
+          status: { $ne: "archived" },
+        });
+        if (!exists) {
+          return send(ws, {
+            type: MSG.ERROR,
+            payload: { message: "Room not available. Create it from landing." },
+          });
+        }
+      } catch (e) {
+        console.error("[WS JOIN] DB check error:", e);
+        return send(ws, {
+          type: MSG.ERROR,
+          payload: { message: "Server error while checking room" },
+        });
+      }
+
       const room = ensureRoom(roomId);
 
       // Optionnel : limiter la taille d’une room

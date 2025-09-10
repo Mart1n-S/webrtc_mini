@@ -18,19 +18,16 @@ const statusEl = document.getElementById("status");
 /** @type {HTMLVideoElement} */
 const localVideo = document.getElementById("localVideo");
 /** @type {HTMLButtonElement} */
-const btnCreate = document.getElementById("btnCreate");
-/** @type {HTMLButtonElement} */
-const btnJoin = document.getElementById("btnJoin");
-/** @type {HTMLButtonElement} */
 const btnHangup = document.getElementById("btnHangup");
-/** @type {HTMLInputElement} */
-const roomIdInput = document.getElementById("roomIdInput");
 
 // Nouveaux contrôles (UI améliorée)
 const btnMic = document.getElementById("btnMic");
 const btnCam = document.getElementById("btnCam");
 const localIndicators = document.getElementById("localIndicators");
 const localCamOffOverlay = document.getElementById("localCamOffOverlay");
+
+// Partage de lien
+const btnShare = document.getElementById("btnShare");
 
 // Conteneur où l'on ajoute les cartes vidéo distantes
 const remotesContainer =
@@ -142,15 +139,6 @@ function sendToPeer(type, to, payload = {}) {
 }
 
 /**
- * Active/désactive les contrôles pendant les actions async.
- * @param {boolean} busy
- */
-function uiSetBusy(busy) {
-  btnCreate.disabled = busy;
-  btnJoin.disabled = busy;
-}
-
-/**
  * Ajoute un style "actif" aux boutons de toggle (utilisé pour montrer état spécial : MUTÉ / CAM OFF).
  * @param {HTMLElement|null} btn
  * @param {boolean} active
@@ -179,6 +167,37 @@ function renderLocalIndicators() {
 function showCamOverlay(show) {
   if (!localCamOffOverlay) return;
   localCamOffOverlay.classList.toggle("show", show);
+}
+
+/**
+ * Construit l'URL partageable de la room courante.
+ * @returns {string|null}
+ */
+function buildShareUrl() {
+  const rid = roomId || (typeof window !== "undefined" ? window.ROOM_ID : null);
+  if (!rid) return null;
+  const url = new URL(`${location.origin}/room/${rid}`);
+  url.searchParams.set("autojoin", "1");
+  return url.toString();
+}
+
+/**
+ * Copie une chaîne dans le presse-papiers (avec fallback).
+ * @param {string} text
+ */
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    return true;
+  }
 }
 
 //////////////////////////////////////
@@ -222,6 +241,10 @@ function createRemoteCard(peerId) {
 
   const ui = { card: cardEl, video, indicators, overlay };
   uiByPeerId.set(peerId, ui);
+
+  // Applique l'état connu si déjà reçu
+  renderRemoteMedia(peerId);
+
   return ui;
 }
 
@@ -312,7 +335,7 @@ function getOrCreatePC(peerId) {
 async function createOfferToPeer(peerId) {
   const pc = getOrCreatePC(peerId);
   try {
-    const offer = await pc.createOffer({ iceRestart: true });
+    const offer = await pc.createOffer(); // offre initiale simple
     await pc.setLocalDescription(offer);
     sendToPeer(MSG.OFFER, peerId, { sdp: pc.localDescription });
   } catch (err) {
@@ -334,7 +357,7 @@ function cleanup(opts = {}) {
   const { closeWs = false } = opts;
 
   // Désactive le bouton hangup
-  btnHangup.disabled = true;
+  if (btnHangup) btnHangup.disabled = true;
 
   // Ferme tous les PC
   for (const [peerId, pc] of pcByPeerId) {
@@ -364,8 +387,6 @@ function cleanup(opts = {}) {
 
   inRoom = false;
   joining = false;
-  btnCreate.disabled = false;
-  btnJoin.disabled = false;
   setBtnActive(btnMic, false);
   setBtnActive(btnCam, false);
   showCamOverlay(false);
@@ -379,7 +400,6 @@ function cleanup(opts = {}) {
     ws = null;
   }
 
-  uiSetBusy(false);
   log("Session nettoyée.");
 }
 
@@ -423,13 +443,14 @@ async function onSignalMessage(ev) {
     inRoom = true;
     joining = false;
 
-    // Verrouiller les boutons pour éviter un second join sur la même socket
-    btnCreate.disabled = true;
-    btnJoin.disabled = true;
+    if (btnHangup) btnHangup.disabled = false;
+
+    // Affiche un message précis selon la taille
+    const created = roomSize === 1;
     log(
-      `${
-        isHost ? "Room créée" : "Rejoint la room"
-      } ${roomId}. Participants: ${roomSize}`
+      created
+        ? `Room ${roomId} créée. En attente de participants…`
+        : `Rejoint la room ${roomId}. Participants: ${roomSize}`
     );
 
     // Synchronise ton état (utile si tu étais déjà mute/cam off)
@@ -607,7 +628,7 @@ async function startCallAsHost() {
   isHost = true;
   await initLocalMedia();
   log(`Room créée: ${roomId}. En attente de pairs...`);
-  btnHangup.disabled = false;
+  if (btnHangup) btnHangup.disabled = false;
 }
 
 /**
@@ -617,7 +638,7 @@ async function startCallAsGuest() {
   isHost = false;
   await initLocalMedia();
   log(`Rejoint la room ${roomId}. Découverte des pairs...`);
-  btnHangup.disabled = false;
+  if (btnHangup) btnHangup.disabled = false;
 }
 
 //////////////////////////////////////
@@ -639,6 +660,14 @@ function broadcastLocalMediaState() {
 }
 
 /**
+ * Met à jour les titres (tooltips) des boutons mic/cam selon l’état.
+ */
+function updateBtnTitles() {
+  if (btnMic) btnMic.title = isMicOn ? "Micro (M)" : "Micro coupé (M)";
+  if (btnCam) btnCam.title = isCamOn ? "Caméra (V)" : "Caméra coupée (V)";
+}
+
+/**
  * Active/Désactive le micro (audio tracks).
  * @param {boolean} enabled
  */
@@ -649,6 +678,7 @@ function setMicEnabled(enabled) {
   setBtnActive(btnMic, !enabled);
   renderLocalIndicators();
   broadcastLocalMediaState();
+  updateBtnTitles();
 }
 
 /**
@@ -663,6 +693,7 @@ function setCamEnabled(enabled) {
   showCamOverlay(!enabled);
   renderLocalIndicators();
   broadcastLocalMediaState();
+  updateBtnTitles();
 }
 
 /** Bascule micro ON/OFF */
@@ -681,66 +712,38 @@ function toggleCam() {
 // Handlers UI                      //
 //////////////////////////////////////
 
-btnCreate.addEventListener("click", async () => {
-  if (inRoom || joining) {
-    log("Tu es déjà dans une room.");
-    return;
-  }
-  joining = true;
-
-  // roomId simple (6 chiffres)
-  roomId = Math.random().toString().slice(2, 8);
-  roomIdInput.value = roomId;
-  uiSetBusy(true);
-
-  try {
-    await connectWS();
-    await startCallAsHost();
-    sendSignal(MSG.JOIN);
-  } catch (err) {
-    joining = false;
-    console.error("Erreur création de room", err);
-    log("Impossible de créer la room.");
+// Raccrocher
+btnHangup &&
+  btnHangup.addEventListener("click", () => {
     cleanup({ closeWs: true });
-  } finally {
-    uiSetBusy(false);
-  }
-});
+    log("Raccroché.");
 
-btnJoin.addEventListener("click", async () => {
-  if (inRoom || joining) {
-    log("Tu es déjà dans une room.");
-    return;
-  }
-  const val = roomIdInput.value.trim();
-  if (!val) return alert("Saisis un ID de room.");
-  roomId = val;
-  joining = true;
-  uiSetBusy(true);
-
-  try {
-    await connectWS();
-    await startCallAsGuest();
-    sendSignal(MSG.JOIN);
-  } catch (err) {
-    joining = false;
-    console.error("Erreur join room", err);
-    log("Impossible de rejoindre la room.");
-    cleanup({ closeWs: true });
-  } finally {
-    uiSetBusy(false);
-  }
-});
-
-btnHangup.addEventListener("click", () => {
-  cleanup({ closeWs: true });
-  log("Raccroché.");
-  // On n’envoie pas un leave explicite : côté serveur, la fermeture WS déclenchera PEER_LEFT pour les autres.
-});
+    // Redirection vers la landing
+    // (petit délai facultatif pour laisser le cleanup finir proprement)
+    setTimeout(() => {
+      window.location.assign("/");
+    }, 50);
+  });
 
 // Boutons Mute/Cam
 btnMic && btnMic.addEventListener("click", toggleMic);
 btnCam && btnCam.addEventListener("click", toggleCam);
+
+// Bouton Partager le lien
+btnShare &&
+  btnShare.addEventListener("click", async () => {
+    const url = buildShareUrl();
+    if (!url) {
+      alert("Aucune room active à partager.");
+      return;
+    }
+    const ok = await copyToClipboard(url);
+    log(
+      ok
+        ? "Lien copié dans le presse-papiers."
+        : "Impossible de copier le lien."
+    );
+  });
 
 // Raccourcis clavier: M (micro), V (caméra)
 window.addEventListener("keydown", (e) => {
@@ -749,3 +752,41 @@ window.addEventListener("keydown", (e) => {
   if (e.key.toLowerCase() === "m") toggleMic();
   if (e.key.toLowerCase() === "v") toggleCam();
 });
+// Auto-join sur /room/:roomId (robuste si DOMContentLoaded déjà passé)
+async function __autoJoinInit() {
+  // Injecté par workspace.js
+  const injectedRoomId = typeof window !== "undefined" ? window.ROOM_ID : null;
+  const params = new URLSearchParams(location.search);
+  const rid = injectedRoomId || params.get("room");
+  const isHostFromUrl =
+    (typeof window !== "undefined" && window.IS_HOST_FROM_URL === true) ||
+    params.get("host") === "1";
+
+  if (!rid) return;
+
+  roomId = rid;
+  joining = true;
+  // uiSetBusy(true);
+
+  try {
+    await connectWS();
+    if (isHostFromUrl) {
+      await startCallAsHost();
+    } else {
+      await startCallAsGuest();
+    }
+    sendSignal(MSG.JOIN);
+  } catch (err) {
+    joining = false;
+    console.error("Auto-join error", err);
+    log("Impossible de démarrer l’appel.");
+    cleanup({ closeWs: true });
+  }
+}
+
+if (document.readyState === "loading") {
+  window.addEventListener("DOMContentLoaded", __autoJoinInit);
+} else {
+  // DOM déjà prêt → lance tout de suite
+  __autoJoinInit();
+}
