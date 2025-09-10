@@ -2,13 +2,8 @@
    Variables & Reset
    ========================================================= */
 :root {
-    --bg: #0f141a;
-    --panel: #151b23;
-    --muted: #9aa4b2;
+    --grey: #9aa4b2;
     --text: #e6edf3;
-    --accent: #4f9cff;
-    --danger: #f47174;
-    --ok: #43d17a;
     --card: #0f1720;
     --border: #1f2a37;
 }
@@ -17,7 +12,7 @@
     box-sizing: border-box;
 }
 
-html,
+/* html,
 body {
     height: 100%;
 }
@@ -27,7 +22,7 @@ body {
     background: linear-gradient(180deg, #0e1217, #0b0f14 40%, #0a0d12);
     color: var(--text);
     font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-}
+} */
 
 /* =========================================================
    Topbar & Container
@@ -61,10 +56,6 @@ body {
     min-height: calc(100vh - 120px);
 }
 
-.wb-layout--full {
-    gap: 0;
-}
-
 /* =========================================================
    Whiteboard (gauche)
    ========================================================= */
@@ -74,40 +65,6 @@ body {
     border-radius: 12px;
     display: flex;
     flex-direction: column;
-}
-
-.wb-toolbar {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    padding: 8px;
-    border-bottom: 1px solid #1e2230;
-    background: #0b0d12;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-}
-
-.tbtn {
-    padding: 6px 10px;
-    border: 1px solid #2a2f3f;
-    border-radius: 8px;
-    background: #131826;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--text);
-}
-
-.tbtn:hover {
-    background: #182036;
-}
-
-.tbtn--primary {
-    border-color: #3758ff;
-}
-
-.spacer {
-    flex: 1;
 }
 
 .wb-canvas {
@@ -122,16 +79,14 @@ body {
 .wb-sidebar {
     display: flex;
     flex-direction: column;
-    border-left: 1px solid var(--border);
     background: transparent;
 }
 
 .call-panel {
-    background: #0f1115;
-    border: 1px solid #1e2230;
-    border-radius: 0;
-    /* collé au bord droit */
-    border-left: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
     min-height: calc(100vh - 120px);
     padding: 12px;
 }
@@ -229,15 +184,6 @@ body {
     margin-bottom: 8px;
 }
 
-.btn.btn-sm {
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: 1px solid #2a2f3f;
-    background: #131826;
-    color: var(--text);
-    cursor: pointer;
-}
-
 .input-sm {
     flex: 1;
     min-width: 0;
@@ -250,7 +196,7 @@ body {
 
 .status {
     margin: 8px 4px 0;
-    color: var(--muted);
+    color: var(--grey);
 }
 
 .status--sm {
@@ -292,7 +238,7 @@ body {
 
 .video-card .badge {
     font-size: 11px;
-    color: var(--muted);
+    color: var(--grey);
 }
 
 .video-card .video-wrap {
