@@ -181,6 +181,48 @@ body {
     cursor: not-allowed;
 }
 
+/* Icônes image dans les boutons toggle */
+.icon-btn .icon {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    vertical-align: middle;
+    object-fit: contain;
+}
+
+/* Par défaut on montre l'icône "on" et on cache "off" */
+.icon-btn .icon-off {
+    display: none;
+}
+
+/* Quand aria-pressed="true" (état coupé) → on montre l'icône OFF */
+.icon-btn[aria-pressed="true"] .icon-on {
+    display: none;
+}
+
+.icon-btn[aria-pressed="true"] .icon-off {
+    display: inline-block;
+}
+
+.icon-btn[data-kind="mic"][aria-pressed="true"],
+.icon-btn[data-kind="cam"][aria-pressed="true"] {
+    border-color: #6b1e23;
+    background: rgba(244, 113, 116, 0.11);
+}
+
+/* Accessibilité: texte caché visuellement mais lisible par les lecteurs d'écran */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 1px, 1px);
+    white-space: nowrap;
+    border: 0;
+}
+
 .room-controls {
     display: flex;
     gap: 8px;
@@ -312,6 +354,6 @@ body {
     }
 
     .participants-remotes {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
     }
 }

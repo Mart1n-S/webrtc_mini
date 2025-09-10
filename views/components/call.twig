@@ -5,18 +5,25 @@
 		<div class="call-header">
 			<h2>Appel</h2>
 			<div class="call-actions">
-				<button id="btnMic" class="icon-btn" aria-pressed="false" title="Micro (M)">🎤</button>
-				<button id="btnCam" class="icon-btn" aria-pressed="false" title="Caméra (V)">📷</button>
-				<button id="btnHangup" class="icon-btn danger" disabled title="Raccrocher">⛔</button>
+				<button id="btnMic" class="icon-btn" aria-pressed="false" title="Micro (M)" data-kind="mic">
+					<img class="icon icon-on" src="/assets/images/icons/mic-circle-outline.svg" alt="" aria-hidden="true"/>
+					<img class="icon icon-off" src="/assets/images/icons/mic-off-circle-outline.svg" alt="" aria-hidden="true"/>
+					<span class="sr-only">Micro</span>
+				</button>
+
+				<button id="btnCam" class="icon-btn" aria-pressed="false" title="Caméra (V)" data-kind="cam">
+					<img class="icon icon-on" src="/assets/images/icons/videocam-outline.svg" alt="" aria-hidden="true"/>
+					<img class="icon icon-off" src="/assets/images/icons/videocam-off-outline.svg" alt="" aria-hidden="true"/>
+					<span class="sr-only">Caméra</span>
+				</button>
+
+				<button id="btnHangup" class="icon-btn danger" disabled title="Raccrocher" aria-label="Raccrocher">
+					<img class="icon" src=" /assets/images/icons/phone-off.svg" alt=" ">
+				</button>
 			</div>
 		</div>
 
-		<div class="room-controls">
-			<button id="btnCreate" class="btn btn-sm">Créer</button>
-			<input id="roomIdInput" class="input-sm" placeholder="ID room"/>
-			<button id="btnJoin" class="btn btn-sm">Rejoindre</button>
-		</div>
-		<p id="status" class="status status--sm">Prêt.</p>
+		<p id="status" class="status status--sm">Préparation de l’appel…</p>
 
 		<div class="participants">
 			<div
@@ -25,7 +32,6 @@
 				<div class="participants-local">
 					{{ cards.video_card('', true) }}
 				</div>
-
 			</div>
 		</div>
 	</div>
