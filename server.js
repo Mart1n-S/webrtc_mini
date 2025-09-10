@@ -214,7 +214,7 @@ app.post("/api/rooms/new", async (req, res) => {
 
 // Route HTML principale rendue via Twig
 app.get("/", (req, res) => {
-  res.render("landing", { title: "webrtc-mini" });
+  res.render("landing", { title: "Cam’Memo" });
 });
 
 // Workspace (nouvelle route)
