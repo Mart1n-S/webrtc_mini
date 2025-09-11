@@ -4,9 +4,13 @@
 Lancer le serveur :
 
 ```bash
+npm run build
 npm start
 ```
-
+et dans un autre terminal lancer pour le whiteboard collaboratif (OT) :
+```bash
+npm run start:ot
+```
 
 Lancer le tunnel ngrok (si besoin) :
 ```bash
@@ -202,3 +206,275 @@ const ICE_SERVERS = [
 * **STUN** (*Session Traversal Utilities for NAT*) : « Quel est mon IP/port publics ? » → produit des candidats **srflx**.
 * **TURN** (*Traversal Using Relays around NAT*) : « Relaye mes médias si on ne peut pas percer le NAT » → produit des candidats **relay**.
   Indispensable quand deux pairs ne peuvent pas se joindre directement (NAT symétriques, réseaux d’entreprise, CGNAT mobile, etc.).
+
+
+# WebRTC Mini – Architecture & flux
+
+> Copiez-collez tel quel dans votre `README.md`.
+
+## Sommaire
+
+* [Aperçu](#aperçu)
+* [Architecture](#architecture)
+
+  * [1) Serveur “app” (Express + WebRTC)](#1-serveur-app-express--webrtc)
+  * [2) Serveur OT (ShareDB) séparé](#2-serveur-ot-sharedb-séparé)
+  * [3) Client — Landing](#3-client--landing)
+  * [4) Client — Workspace (composition UI)](#4-client--workspace-composition-ui)
+  * [5) Appel vidéo P2P (WebRTC)](#5-appel-vidéo-p2p-webrtc)
+  * [6) Bloc-note collaboratif (OT + Quill)](#6-bloc-note-collaboratif-ot--quill)
+* [Données & persistance](#données--persistance)
+* [Démarrer / développer](#démarrer--développer)
+* [Schémas (Mermaid)](#schémas-mermaid)
+* [Arborescence minimale](#arborescence-minimale)
+
+---
+
+## Aperçu
+
+Deux serveurs :
+
+* **Serveur app** (`server.js`) : Express + Twig + WebSocket de signalisation WebRTC + API REST.
+* **Serveur OT** (`ot-server.js`) : ShareDB + `sharedb-mongo` + type `rich-text` (port **3001**).
+
+Un client web :
+
+* **Landing** (création de room).
+* **Workspace** avec **appel vidéo P2P** (WebRTC) + **bloc-note collaboratif** (Quill + OT).
+
+---
+
+## Architecture
+
+### 1) Serveur “app” (Express + WebRTC)
+
+**Fichier :** `server.js`
+**Rôle :** sert le site (Twig) et les assets `/public`.
+
+#### Routes
+
+```http
+POST /api/rooms/new
+  → crée une room (collection Mongo "rooms")
+  → ensureOTDoc(roomId) (crée le doc ShareDB s’il n’existe pas)
+  → renvoie l’URL de la room (/room/:id)
+
+GET /room/:roomId
+  → vérifie l’existence de la room
+  → ensureOTDoc(roomId)
+  → rend views/workspace.twig
+```
+
+#### Signalisation WebRTC via WebSocket `/ws`
+
+Gère les événements :
+
+```
+join, peer-joined, offer, answer, ice-candidate, peer-left, media-state
+```
+
+#### Mémoire (clients par room)
+
+```ts
+Map<roomId, Map<clientId, WebSocket>>
+```
+
+#### MongoDB (Mongoose)
+
+* Modèle **Room** (collection `rooms`).
+
+---
+
+### 2) Serveur OT (ShareDB) séparé
+
+**Fichier :** `ot-server.js` (port **3001**)
+**Stack :** ShareDB + `sharedb-mongo` + type **rich-text**.
+**WebSocket dédié :** chaque connexion est “branchée” à ShareDB via `websocket-json-stream`.
+
+#### Persistance
+
+* `docs` : snapshot courant (Delta Quill)
+  Champs : `_id = roomId`, `type = "rich-text"`, `v = version`.
+* `o_docs` : historique d’opérations (journal OT).
+
+**Propriété :** redémarrez les serveurs → le contenu revient depuis `docs`.
+
+---
+
+### 3) Client — Landing
+
+**Fichier :** `public/assets/js/landing.js`
+Bouton **“Créer une room”** :
+
+```txt
+POST /api/rooms/new
+→ redirige vers /room/:id?autojoin=1&host=1
+```
+
+---
+
+### 4) Client — Workspace (composition UI)
+
+**Template :** `views/workspace.twig` inclut :
+
+* `components/whiteboard.twig` (éditeur/whiteboard)
+* `components/call.twig` (panneau appel vidéo)
+
+**Scripts chargés :**
+
+* `/assets/js/workspace.js` → expose `window.ROOM_ID`, flags `autojoin` & `host`.
+* `/assets/vite/ot-main.js` → éditeur collaboratif OT.
+* `/assets/js/app.js` → WebRTC (audio/vidéo).
+
+---
+
+### 5) Appel vidéo P2P (WebRTC)
+
+**Fichier :** `public/assets/js/app.js`
+
+* Capture : `getUserMedia` (micro/caméra), toggles mute/cam, overlay, raccourcis **M/V**.
+* Connexion WS `/ws` → **mesh** `RTCPeerConnection` (un peer connection par remote).
+* Négociation : `offer` / `answer` / `ice-candidate` routés par le serveur.
+* UI participants : cartes vidéo locale/distantes, badges d’état (mute/cam), overlays.
+* **STUN** : `stun:stun.l.google.com:19302`.
+
+---
+
+### 6) Bloc-note collaboratif (OT + Quill)
+
+**Source :** `src/ot-main.js` (bundlé par Vite → `/assets/vite/ot-main.js`)
+
+Flux :
+
+```js
+// Initialisation
+const quill = new Quill('#editor', {/* ... */});
+
+// Connexion OT
+const connection = new ShareDB.Connection(new WebSocket('ws://localhost:3001'));
+const doc = connection.get('docs', ROOM_ID);
+doc.subscribe();
+
+// Démarrage : injecte le snapshot (Delta) dans Quill
+doc.on('load', () => quill.setContents(doc.data || []));
+
+// Quill → ShareDB (édition locale)
+quill.on('text-change', (delta, old, source) => {
+  if (source === 'user') doc.submitOp(delta);
+});
+
+// ShareDB → Quill (op distante)
+doc.on('op', (op, source) => {
+  if (source) return;         // déjà appliqué localement
+  quill.updateContents(op);
+});
+```
+
+**Important :** le document est **créé côté serveur** via `ensureOTDoc(roomId)` → le client ne fait que `subscribe` (pas de `create`) pour éviter les conditions de course.
+
+---
+
+## Données & persistance
+
+**Base MongoDB :** `webrtcmini`
+
+Collections :
+
+* `rooms` → rooms créées (modèle Mongoose `Room`).
+* `docs` → état courant du bloc-note par room (`_id = roomId`, `data = Delta`).
+* `o_docs` → journal des opérations OT.
+
+Comportement :
+
+> À l’ouverture d’une room, l’app lit `docs[_id=roomId]` pour remplir l’éditeur.
+> Chaque frappe produit une op enregistrée en base et diffusée aux autres clients.
+
+---
+
+## Démarrer / développer
+
+**Build client OT** (si vous modifiez `src/ot-main.js`)
+
+```bash
+npm run build
+```
+
+**Serveur app** (HTTP + `/ws`)
+
+```bash
+npm start
+```
+
+**Serveur OT** (ShareDB, port 3001)
+
+```bash
+npm run start:ot
+```
+
+**Ouvrir l’app**
+
+```
+http://localhost:3000
+→ créez/partagez une room depuis la landing
+```
+
+---
+
+## Schémas (Mermaid)
+
+### Signalisation WebRTC (simplifiée)
+![Diagram](.github/diagram_WEBRTC.png)
+
+
+Un **ICE candidate** (WebRTC) est une “possibilité de chemin réseau” qu’un pair propose pour établir la connexion P2P.
+
+En pratique, **un candidate décrit** :
+
+* une **IP** + **port**,
+* un **protocole** (UDP/TCP),
+* un **type** et une **priorité**.
+
+**Types courants**
+
+* **host** : IP locale (sur ton LAN).
+* **srflx** (server-reflexive) : IP publique découverte via **STUN** (traverse la plupart des NAT).
+* **relay** : IP/port d’un **serveur TURN** (relais quand direct impossible).
+
+**Pourquoi c’est utile ?**
+Derrière des NAT/pare-feu, on ne sait pas d’avance par où passer. Les pairs **collectent** plusieurs candidats, se les **échangent via le serveur de signalisation** (dans ton schéma, `S`), puis le protocole **ICE** teste ces combinaisons et **choisit la meilleure** (connectivity checks). C’est ce qu’on appelle aussi **trickle ICE** quand on envoie les candidats au fur et à mesure qu’on les découvre.
+
+**Dans le diagramme**
+Les messages `ice-candidate` sont juste l’**échange de ces coordonnées réseau** entre A et B, routés par `S`, pour permettre la connexion P2P.
+
+*Exemple (simplifié)*
+
+```
+a=candidate:842163049 1 udp 1677729535 203.0.113.5 53624 typ srflx raddr 192.168.1.10 rport 53624
+```
+
+
+---
+
+## Arborescence minimale
+
+```txt
+.
+├─ server.js
+├─ ot-server.js
+├─ views/
+│  ├─ workspace.twig
+│  └─ components/
+│     ├─ whiteboard.twig
+│     └─ call.twig
+├─ public/
+│  └─ assets/
+│     └─ js/
+│        ├─ landing.js
+│        ├─ workspace.js
+│        └─ app.js
+├─ src/
+│  └─ ot-main.js
+└─ (build) /assets/vite/ot-main.js  ← généré par Vite
+```
+
+---

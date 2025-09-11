@@ -1,13 +1,11 @@
 <section class="wb-board">
 	<div class="wb-toolbar">
-		<button class="tbtn" data-tool="select">🖱️ Sélection</button>
-		<button class="tbtn" data-tool="note">🗒️ Post-it</button>
-		<button class="tbtn" data-tool="pen">✏️ Stylo</button>
-		<button class="tbtn" data-tool="erase">🧽 Gomme</button>
-		<div class="spacer"></div>
 		<button class="tbtn tbtn--primary" id="btnShare">Partager le lien</button>
 	</div>
+
 	<div
-		id="board" class="wb-canvas" tabindex="0" aria-label="Whiteboard"><!-- Post-its & dessins viendront ici -->
+		id="board" class="wb-canvas" tabindex="0" aria-label="Whiteboard">
+		<!-- Éditeur OT (Quill) -->
+		<div id="editor"></div>
 	</div>
 </section>

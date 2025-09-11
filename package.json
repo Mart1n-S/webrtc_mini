@@ -4,14 +4,29 @@
   "description": "Mini projet WebRTC video P2P avec signalisation WebSocket",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "vite build",
+    "start:ot": "node ot-server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "mongoose": "^8.18.1",
     "nanoid": "^5.0.7",
+    "quill": "^2.0.3",
+    "rich-text": "^4.1.0",
+    "sharedb": "^5.2.2",
+    "sharedb-mongo": "^5.0.0",
     "toastify-js": "^1.12.0",
     "twig": "^1.17.1",
+    "websocket-json-stream": "^0.0.3",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "buffer": "^6.0.3",
+    "events": "^3.3.0",
+    "inherits": "^2.0.4",
+    "process": "^0.11.10",
+    "util": "^0.12.5",
+    "vite": "^7.1.5"
   }
 }

@@ -1,4 +1,8 @@
 {% extends "base.twig" %}
+{% block head_extra %}
+	<!-- Quill 2 (CDN) -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
+{% endblock %}
 
 {% block content %}
 	<div id="workspaceRoot" class="wb-layout wb-layout--full" data-room-id="{{ roomId }}">
@@ -6,5 +10,7 @@
 		{% include "components/call.twig" %}
 	</div>
 
+	{# <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script> #}
 	<script src="/assets/js/workspace.js"></script>
+	<script type="module" src="/assets/vite/ot-main.js"></script>
 {% endblock %}

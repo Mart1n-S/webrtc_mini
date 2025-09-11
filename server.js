@@ -22,6 +22,11 @@ const twig = require("twig");
 const mongoose = require("mongoose");
 const Room = require("./models/Room");
 
+// ShareDB (pour la partie tableau blanc collaboratif)
+const ShareDB = require("sharedb");
+const richText = require("rich-text");
+const ShareDBMongo = require("sharedb-mongo");
+
 ///////////////////////////////
 // Constantes de configuration
 ///////////////////////////////
@@ -40,6 +45,45 @@ const MAX_ROOM_SIZE = 0;
  */
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/webrtcmini";
+
+// --- ShareDB (OT) backend ---
+// Enregistre le type riche (delta Quill compatible)
+ShareDB.types.register(richText.type);
+
+// Adapter Mongo pour ShareDB (utilise la même instance MongoDB que l'app)
+const shareDbMongo = ShareDBMongo(MONGODB_URI, { db: { name: "webrtcmini" } });
+
+// Backend ShareDB
+const shareDbBackend = new ShareDB({ db: shareDbMongo });
+
+// ------ ShareDB utils --------
+function ensureOTDoc(roomId) {
+  return new Promise((resolve, reject) => {
+    try {
+      const conn = shareDbBackend.connect();
+      const doc = conn.get("docs", roomId);
+      doc.fetch((err) => {
+        if (err) return reject(err);
+        if (doc.type) return resolve(false); // déjà existant
+        // Snapshot initial vide (Delta valide pour rich-text)
+        const initialDelta = [{ insert: "\n" }];
+        doc.create(initialDelta, "rich-text", (err2) => {
+          if (err2) {
+            const msg = String(err2.message || err2);
+            // Course bénigne : un autre l’a créé juste avant
+            if (/created remotely|already exists/i.test(msg)) {
+              return resolve(false);
+            }
+            return reject(err2);
+          }
+          resolve(true); // créé par nous
+        });
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
 
 //////////////////////////////////////
 // États & Structures de données   //
@@ -202,6 +246,7 @@ app.post("/api/rooms/new", async (req, res) => {
     } while (await Room.exists({ roomId: rid }));
 
     await Room.create({ roomId: rid });
+    await ensureOTDoc(rid);
 
     // URL canonique pour l’hôte
     const url = `/room/${rid}?autojoin=1&host=1`;
@@ -228,6 +273,12 @@ app.get("/room/:roomId", async (req, res) => {
     return res.redirect(`/?error=room_not_found`);
   }
 
+  try {
+    await ensureOTDoc(roomId);
+  } catch (e) {
+    console.error("[ensureOTDoc] error:", e);
+  }
+
   // OK → on rend la page workspace
   res.render("workspace", { title: "Whiteboard + Call", roomId });
 });
@@ -241,7 +292,9 @@ const wss = new WebSocketServer({ server, path: WS_PATH });
 /**
  * Gestion des connexions WebSocket
  */
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, request) => {
+  console.log("WS /ws connected:", request.url);
+
   /** ID unique du client */
   const clientId = nanoid(10);
   /** Room rejointe par ce client (null tant qu'il n'a pas JOIN) */
