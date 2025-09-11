@@ -106,6 +106,7 @@ const MSG = {
   ICE: "ice-candidate",
   ERROR: "error",
   MEDIA: "media-state",
+  PROFILE: "profile",
 };
 
 ///////////////////////////////////
@@ -387,7 +388,9 @@ wss.on("connection", (ws, request) => {
     if (!joinedRoomId) return;
 
     // --- Signalisation relai ---
-    if ([MSG.OFFER, MSG.ANSWER, MSG.ICE, MSG.MEDIA].includes(type)) {
+    if (
+      [MSG.OFFER, MSG.ANSWER, MSG.ICE, MSG.MEDIA, MSG.PROFILE].includes(type)
+    ) {
       const targetId = payload?.to || null;
       const message = { type, payload: { ...payload, from: clientId } };
 

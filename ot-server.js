@@ -17,6 +17,7 @@ ShareDB.types.register(richText.type);
 // Backend ShareDB (même Mongo que ton app principale)
 const backend = new ShareDB({
   db: ShareDBMongo(MONGODB_URI, { db: { name: "webrtcmini" } }),
+  presence: true,
 });
 
 // Petit serveur HTTP + WebSocket

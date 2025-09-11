@@ -66,6 +66,13 @@ const remoteMediaByPeerId = new Map(); // peerId -> { mic:boolean, cam:boolean }
 // ---- Perfect Negotiation (hérité 1:1, pas utilisé en mesh ciblé) ----
 let localClientId = null;
 
+let displayName =
+  localStorage.getItem("displayName") ||
+  `User-${Math.random().toString(36).slice(2, 6)}`;
+// exposé global pour l’OT
+window.PEER_NAMES = window.PEER_NAMES || {};
+window.PEER_NAMES["local"] = displayName;
+
 //////////////////////////////////////
 // Constantes & “enums”             //
 //////////////////////////////////////
@@ -84,6 +91,7 @@ const MSG = {
   ICE: "ice-candidate",
   ERROR: "error",
   MEDIA: "media-state",
+  PROFILE: "profile",
 };
 
 //////////////////////////////////////
@@ -200,6 +208,35 @@ async function copyToClipboard(text) {
   }
 }
 
+/**
+ * Met à jour le nom affiché dans l’en-tête de la carte locale.
+ * */
+function setLocalHeaderName() {
+  const h3 = document.querySelector(".video-card--local .video-header h3");
+  if (h3) h3.textContent = `Moi — ${displayName}`;
+}
+/**
+ * Met à jour le nom affiché dans l’en-tête de la carte distante.
+ * @param {*} peerId
+ * @param {*} name
+ */
+function setRemoteHeaderName(peerId, name) {
+  const card = document.querySelector(
+    `.video-card[data-peer="${peerId}"] .video-header h3`
+  );
+  if (card) card.textContent = name || `Remote (${peerId.slice(0, 6)})`;
+}
+
+/**
+ * Envoie le profil de l'utilisateur (nom) à un peer spécifique ou à tous.
+ * @param {*} to
+ */
+function sendProfile(to = null) {
+  const payload = { name: displayName };
+  if (to) sendToPeer(MSG.PROFILE, to, payload);
+  else sendSignal(MSG.PROFILE, payload);
+}
+
 //////////////////////////////////////
 // UI cartes remote (par peer)      //
 //////////////////////////////////////
@@ -225,6 +262,12 @@ function createRemoteCard(peerId) {
   // Récupère les éléments utiles
   const cardEl = /** @type {HTMLElement} */ (card);
   cardEl.dataset.peer = peerId;
+
+  // Teinte la carte du remote avec sa couleur (identique à son curseur)
+  if (peerId) {
+    cardEl.style.setProperty("--peer-accent", colorFromId(peerId));
+    cardEl.setAttribute("data-accent", "");
+  }
 
   const video = /** @type {HTMLVideoElement} */ (cardEl.querySelector("video"));
   const indicators = /** @type {HTMLElement} */ (
@@ -424,6 +467,18 @@ function connectWS() {
 }
 
 /**
+ * Génère une couleur HSL unique pour un id donné (stable).
+ * @param {*} id
+ * @returns {string} couleur HSL unique pour un id donné (stable)
+ */
+function colorFromId(id) {
+  let h = 0;
+  if (!id) return "#888";
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return `hsl(${h % 360}deg 80% 60%)`;
+}
+
+/**
  * Gestion des messages de signalisation reçus du serveur.
  * @param {MessageEvent<string>} ev
  */
@@ -440,6 +495,22 @@ async function onSignalMessage(ev) {
     const { roomSize, clientId, peers = [] } = payload || {};
     localClientId = clientId;
 
+    // expose et notifie l'OT
+    window.WRTC_CLIENT_ID = localClientId;
+    window.PEER_NAMES[localClientId] = displayName;
+    window.dispatchEvent(
+      new CustomEvent("wrtc-joined", { detail: { clientId } })
+    );
+
+    setLocalHeaderName();
+
+    // Teinte la carte locale avec la même couleur que le curseur
+    const localCard = document.querySelector(".video-card--local");
+    if (localCard && localClientId) {
+      localCard.style.setProperty("--peer-accent", colorFromId(localClientId));
+      localCard.setAttribute("data-accent", ""); // active le style CSS
+    }
+
     inRoom = true;
     joining = false;
 
@@ -453,7 +524,10 @@ async function onSignalMessage(ev) {
         : `Rejoint la room ${roomId}. Participants: ${roomSize}`
     );
 
-    // Synchronise ton état (utile si tu étais déjà mute/cam off)
+    // Diffuse mon profil (pseudo)
+    sendProfile();
+
+    // Synchronise ton état média
     if (Array.isArray(peers) && peers.length) {
       for (const pid of peers) {
         if (pid && pid !== localClientId) {
@@ -482,10 +556,31 @@ async function onSignalMessage(ev) {
     createRemoteCard(joinedId);
     getOrCreatePC(joinedId);
 
-    // Synchronise ton état média vers le nouveau venu
+    // Envoie ton profil immédiatement au nouveau
+    sendToPeer(MSG.PROFILE, joinedId, { name: displayName });
+
+    // Synchronise l’état média
     sendToPeer(MSG.MEDIA, joinedId, { mic: isMicOn, cam: isCamOn });
 
     log(`Un pair (${joinedId}) a rejoint. En attente de son offre...`);
+    return;
+  }
+
+  // --- Pseudo/profil reçu ---
+  if (type === MSG.PROFILE) {
+    const from = payload?.from;
+    const to = payload?.to;
+    if (to && to !== localClientId) return;
+
+    const name = payload?.name || `Remote (${(from || "").slice(0, 6)})`;
+    if (from) {
+      window.PEER_NAMES[from] = name;
+      setRemoteHeaderName(from, name);
+      // Notifie l’OT (quill-cursors) pour MAJ du label
+      window.dispatchEvent(
+        new CustomEvent("peer-name", { detail: { id: from, name } })
+      );
+    }
     return;
   }
 
@@ -569,10 +664,12 @@ async function onSignalMessage(ev) {
     }
     pcByPeerId.delete(leftId);
     removeRemoteCard(leftId);
+    // nettoyage du cache de noms
+    if (leftId && window.PEER_NAMES[leftId]) delete window.PEER_NAMES[leftId];
     return;
   }
 
-  // --- État média du pair (mute/cam off) ---
+  // --- État média du pair ---
   if (type === MSG.MEDIA) {
     // payload: { mic: boolean, cam: boolean, from: clientId, to?: clientId }
     const from = payload?.from;
@@ -749,8 +846,6 @@ btnShare &&
 window.addEventListener("keydown", (e) => {
   const tag = (e.target && e.target.tagName) || "";
   if (tag === "INPUT" || tag === "TEXTAREA") return;
-  if (e.key.toLowerCase() === "m") toggleMic();
-  if (e.key.toLowerCase() === "v") toggleCam();
 });
 // Auto-join sur /room/:roomId (robuste si DOMContentLoaded déjà passé)
 async function __autoJoinInit() {

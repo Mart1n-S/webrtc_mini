@@ -303,6 +303,14 @@ body {
     background: #000;
 }
 
+.video-card[data-accent] {
+    border-color: var(--peer-accent, var(--border));
+}
+
+.video-card[data-accent] .video-header {
+    border-bottom-color: var(--peer-accent, var(--border));
+}
+
 .overlay {
     position: absolute;
     inset: 0;

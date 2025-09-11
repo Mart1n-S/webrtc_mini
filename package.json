@@ -13,6 +13,7 @@
     "mongoose": "^8.18.1",
     "nanoid": "^5.0.7",
     "quill": "^2.0.3",
+    "quill-cursors": "^4.0.4",
     "rich-text": "^4.1.0",
     "sharedb": "^5.2.2",
     "sharedb-mongo": "^5.0.0",
