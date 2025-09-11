@@ -178,6 +178,527 @@ function initOT(roomId, myId) {
     publishLocalSelection(quill.getSelection());
     console.log("[OT] prêt (cursors on) pour", roomId, "id=", myId);
 
+    // ======= Board (notes) – JSON0 =======
+    const boardDoc = connection.get("boards", roomId);
+    const notesLayer = document.getElementById("notesLayer");
+    const boardScroll = document.getElementById("board"); // conteneur scrollable (wb-canvas)
+
+    const PADDING_BOTTOM = 24; // marge sous la note la plus basse
+    const NEW_NOTE_OFFSET = 40; // offset quand on ajoute une note
+
+    // id simple
+    const newId = () => Math.random().toString(36).slice(2);
+
+    /** Recalcule une min-height pour notesLayer selon la note la plus basse. */
+    function recomputeMinHeight() {
+      if (!notesLayer || !boardDoc.data || !boardDoc.data.notes) return;
+      let maxBottom = 0;
+      // calcule le maxBottom à partir des DOM existants (plus fiable que data.width/height)
+      const nodes = notesLayer.querySelectorAll(".note");
+      nodes.forEach((el) => {
+        const top = parseInt(el.style.top || "0", 10);
+        const h = el.offsetHeight || 120;
+        const bottom = top + h;
+        if (bottom > maxBottom) maxBottom = bottom;
+      });
+      const desired = Math.max(
+        notesLayer.clientHeight,
+        maxBottom + PADDING_BOTTOM
+      );
+      notesLayer.style.minHeight = `${desired}px`;
+    }
+
+    const MIN_W = 160;
+    const MIN_H = 110;
+    const NOTE_MARGIN = 16; // marge entre notes
+
+    function rectsOverlap(a, b) {
+      return !(
+        a.x + a.w <= b.x ||
+        b.x + b.w <= a.x ||
+        a.y + a.h <= b.y ||
+        b.y + b.h <= a.y
+      );
+    }
+
+    function anyOverlap(x, y, w, h, notes, ignoreId) {
+      const me = { x, y, w, h };
+      for (const n of notes) {
+        if (n.id === ignoreId) continue;
+        const r = { x: n.x, y: n.y, w: n.w || 180, h: n.h || 120 };
+        // applique une marge
+        r.x -= NOTE_MARGIN / 2;
+        r.y -= NOTE_MARGIN / 2;
+        r.w += NOTE_MARGIN;
+        r.h += NOTE_MARGIN;
+        if (rectsOverlap(me, r)) return true;
+      }
+      return false;
+    }
+
+    /**
+     * Trouve un spot libre dans la zone (scan en grille vers le bas)
+     * @returns { x:number, y:number }
+     */
+    function findFreeSpot(desiredX, desiredY, w, h) {
+      const layerW = notesLayer.clientWidth || 1000;
+      // clamp X dans la largeur visible
+      const startX = Math.max(0, Math.min(desiredX, Math.max(0, layerW - w)));
+      const notes = (boardDoc.data && boardDoc.data.notes) || [];
+
+      const stepX = w + NOTE_MARGIN;
+      const stepY = h + NOTE_MARGIN;
+
+      // On scanne du y désiré vers le bas, par lignes, jusqu’à 4000px
+      const MAX_SCAN = 4000;
+      for (let y = Math.max(0, desiredY); y < MAX_SCAN; y += stepY) {
+        for (
+          let x = 0;
+          x <= layerW - w;
+          x += Math.max(100, Math.min(stepX, 260))
+        ) {
+          // priorité à la colonne proche du startX (petit tri)
+          const xx = Math.abs(x - startX) < 80 ? startX : x;
+          if (!anyOverlap(xx, y, w, h, notes)) {
+            // étend la min-height si besoin
+            const bottom = y + h + PADDING_BOTTOM;
+            const currentMin = parseInt(
+              getComputedStyle(notesLayer).minHeight || "0",
+              10
+            );
+            if (bottom > currentMin) notesLayer.style.minHeight = `${bottom}px`;
+            return { x: xx, y };
+          }
+        }
+      }
+      // fallback : place quand même (pour ne pas bloquer), en bas
+      const fallbackY = (notesLayer.scrollHeight || 0) + NOTE_MARGIN;
+      return { x: startX, y: fallbackY };
+    }
+
+    /** Rendu complet (notes) */
+    function renderAllNotes() {
+      if (!notesLayer) return;
+      notesLayer.innerHTML = "";
+      const data = boardDoc.data || { notes: [] };
+      for (const n of data.notes) {
+        const el = renderNoteDom(n);
+        notesLayer.appendChild(el);
+      }
+      // ajuste la hauteur mini en fonction des notes rendues
+      recomputeMinHeight();
+    }
+
+    /** Crée un post-it DOM + interactions (drag + edit) */
+    function renderNoteDom(note) {
+      const el = document.createElement("div");
+      el.className = "note";
+      el.tabIndex = 0;
+      el.dataset.id = note.id;
+
+      // width/height avec fallback + min
+      const w = Math.max(MIN_W, note.w || 180);
+      const h = Math.max(MIN_H, note.h || 120);
+
+      el.style.left = `${note.x}px`;
+      el.style.top = `${note.y}px`;
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+
+      // bouton croix
+      const close = document.createElement("button");
+      close.className = "note__close";
+      close.type = "button";
+      close.setAttribute("aria-label", "Supprimer la note");
+      close.textContent = "×";
+      el.appendChild(close);
+
+      // texte
+      const txt = document.createElement("div");
+      txt.className = "note__text";
+      txt.textContent = note.text || "Votre note…";
+      el.appendChild(txt);
+
+      // poignée de resize (coin bas-droite)
+      const grip = document.createElement("div");
+      grip.className = "note__resize";
+      el.appendChild(grip);
+
+      // --- suppression unitaire ---
+      close.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteNote(note.id);
+      });
+
+      // ---- Drag (avec contraintes et extension vers le bas) ----
+      let startX = 0,
+        startY = 0,
+        baseX = note.x,
+        baseY = note.y,
+        dragging = false;
+
+      const onMouseMove = (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        // dimensions courantes
+        const layerW = notesLayer.clientWidth;
+        const noteW = el.offsetWidth;
+        const noteH = el.offsetHeight;
+
+        // clamp X: [0 .. layerW - noteW]
+        const nextX = Math.max(
+          0,
+          Math.min(baseX + dx, Math.max(0, layerW - noteW))
+        );
+
+        // Y: >= 0, et si dépasse en bas → on agrandit la min-height
+        const nextY = Math.max(0, baseY + dy);
+        const bottom = nextY + noteH;
+
+        // si on dépasse la hauteur visible → on étend la min-height
+        const minNeeded = bottom + PADDING_BOTTOM;
+        const currentMin = parseInt(
+          getComputedStyle(notesLayer).minHeight || "0",
+          10
+        );
+        if (minNeeded > currentMin) {
+          notesLayer.style.minHeight = `${minNeeded}px`;
+          if (boardScroll) boardScroll.scrollTop = boardScroll.scrollHeight;
+        }
+
+        el.style.left = `${nextX}px`;
+        el.style.top = `${nextY}px`;
+      };
+
+      const onMouseUp = () => {
+        if (!dragging) return;
+        dragging = false;
+        el.classList.remove("dragging");
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+
+        // position finale (clampée)
+        const curX = parseInt(el.style.left || "0", 10);
+        const curY = parseInt(el.style.top || "0", 10);
+        const finalX = Math.max(0, curX);
+        const finalY = Math.max(0, curY);
+
+        // soumettre op json0: remplacer x,y
+        const idx = (boardDoc.data.notes || []).findIndex(
+          (n) => n.id === note.id
+        );
+        if (idx >= 0) {
+          boardDoc.submitOp(
+            [
+              { p: ["notes", idx, "x"], od: note.x, oi: finalX },
+              { p: ["notes", idx, "y"], od: note.y, oi: finalY },
+            ],
+            (err) => err && console.warn("[board] move error:", err)
+          );
+        }
+      };
+
+      el.addEventListener("mousedown", (e) => {
+        // pas de drag sur texte / croix / grip, ni en mode édition
+        if (e.target === txt || e.target.closest(".note__text")) return;
+        if (e.target === close || e.target === grip) return;
+        if (el.classList.contains("editing")) return;
+
+        dragging = true;
+        el.classList.add("dragging");
+        startX = e.clientX;
+        startY = e.clientY;
+        baseX = parseInt(el.style.left, 10) || 0;
+        baseY = parseInt(el.style.top, 10) || 0;
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+      });
+
+      // ---- Edition du texte (double-clic) ----
+      txt.addEventListener("dblclick", (e) => {
+        e.stopPropagation();
+        startEditingNoteText(note.id, txt);
+      });
+
+      // ---- Resize (coin SE) ----
+      grip.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
+        const startMx = e.clientX,
+          startMy = e.clientY;
+        const startW = el.offsetWidth,
+          startH = el.offsetHeight;
+        el.classList.add("resizing");
+
+        const onMove = (ev) => {
+          const dw = ev.clientX - startMx;
+          const dh = ev.clientY - startMy;
+          const newW = Math.max(MIN_W, startW + dw);
+          const newH = Math.max(MIN_H, startH + dh);
+          el.style.width = `${newW}px`;
+          el.style.height = `${newH}px`;
+
+          // agrandit le board si besoin
+          const top = parseInt(el.style.top || "0", 10);
+          const bottom = top + newH + PADDING_BOTTOM;
+          const currentMin = parseInt(
+            getComputedStyle(notesLayer).minHeight || "0",
+            10
+          );
+          if (bottom > currentMin) {
+            notesLayer.style.minHeight = `${bottom}px`;
+            if (boardScroll) boardScroll.scrollTop = boardScroll.scrollHeight;
+          }
+        };
+
+        const onUp = () => {
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          el.classList.remove("resizing");
+
+          // Commit OT: w/h
+          const idx = (boardDoc.data.notes || []).findIndex(
+            (n) => n.id === note.id
+          );
+          if (idx >= 0) {
+            const oldW = boardDoc.data.notes[idx].w || startW;
+            const oldH = boardDoc.data.notes[idx].h || startH;
+            const finalW = Math.max(MIN_W, Math.round(el.offsetWidth));
+            const finalH = Math.max(MIN_H, Math.round(el.offsetHeight));
+            boardDoc.submitOp(
+              [
+                { p: ["notes", idx, "w"], od: oldW, oi: finalW },
+                { p: ["notes", idx, "h"], od: oldH, oi: finalH },
+              ],
+              (err) => err && console.warn("[board] resize error:", err)
+            );
+          }
+          recomputeMinHeight();
+        };
+
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+
+      return el;
+    }
+
+    /** Lance l'édition (contenteditable) et submit OT sur validation */
+    function startEditingNoteText(noteId, textEl) {
+      const idx = (boardDoc.data.notes || []).findIndex((n) => n.id === noteId);
+      if (idx < 0) return;
+
+      const oldVal = boardDoc.data.notes[idx].text || "";
+      const noteEl = textEl.closest(".note");
+      if (!noteEl) return;
+
+      // hauteur de départ (pour comparer)
+      const startHeight = noteEl.offsetHeight;
+
+      // passe en mode édition
+      noteEl.classList.add("editing");
+      textEl.setAttribute("contenteditable", "true");
+      textEl.focus();
+
+      // place le caret à la fin
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(textEl);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      // auto-grow à l’entrée en édition (au cas où)
+      autoGrowNoteHeight(noteEl, textEl);
+
+      // pendant la saisie, ajuste la hauteur (sans envoyer d’OP)
+      const onInput = () => {
+        // un rAF pour lisser (évite jank pendant frappe)
+        requestAnimationFrame(() => autoGrowNoteHeight(noteEl, textEl));
+      };
+
+      const onKeyDown = (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          textEl.blur();
+        }
+      };
+
+      const onBlur = () => {
+        textEl.removeEventListener("input", onInput);
+        textEl.removeEventListener("keydown", onKeyDown);
+        textEl.removeEventListener("blur", onBlur);
+        textEl.removeAttribute("contenteditable");
+        noteEl.classList.remove("editing");
+
+        const newVal = textEl.textContent || "";
+        const finalH = Math.max(MIN_H, Math.round(noteEl.offsetHeight));
+
+        const ops = [];
+
+        // 1) texte changé ?
+        if (newVal !== oldVal) {
+          ops.push({ p: ["notes", idx, "text"], od: oldVal, oi: newVal });
+        }
+
+        // 2) hauteur à persister ?
+        const oldH = boardDoc.data.notes[idx].h || startHeight;
+        if (finalH !== oldH) {
+          ops.push({ p: ["notes", idx, "h"], od: oldH, oi: finalH });
+        }
+
+        if (ops.length) {
+          boardDoc.submitOp(
+            ops,
+            (err) => err && console.warn("[board] edit/height error:", err)
+          );
+        }
+
+        // ajuste la min-height globale après édition
+        recomputeMinHeight();
+      };
+
+      textEl.addEventListener("input", onInput);
+      textEl.addEventListener("keydown", onKeyDown);
+      textEl.addEventListener("blur", onBlur);
+    }
+
+    /** Ajoute une note, centrée approximativement */
+    function addNote(x, y) {
+      if (!notesLayer) return;
+
+      const defaultW = 180,
+        defaultH = 120;
+      // centre visible
+      const rect = notesLayer.getBoundingClientRect();
+      const desiredX = Math.max(
+        0,
+        typeof x === "number" ? x : Math.round(rect.width / 2 - defaultW / 2)
+      );
+      const desiredY = Math.max(
+        0,
+        typeof y === "number" ? y : Math.round(rect.height / 2 - defaultH / 2)
+      );
+
+      // trouve une place libre
+      const spot = findFreeSpot(desiredX, desiredY, defaultW, defaultH);
+
+      const note = {
+        id: newId(),
+        x: spot.x,
+        y: spot.y,
+        w: defaultW,
+        h: defaultH,
+        text: "Nouvelle note",
+        color: "#fff6a9",
+      };
+      const notes = (boardDoc.data && boardDoc.data.notes) || [];
+      const pos = notes.length;
+
+      boardDoc.submitOp([{ p: ["notes", pos], li: note }], (err) => {
+        if (err) console.warn("[board] add error:", err);
+        requestAnimationFrame(() => {
+          recomputeMinHeight();
+          if (boardScroll) boardScroll.scrollTop = boardScroll.scrollHeight;
+        });
+      });
+    }
+
+    /** Supprime une note par son id */
+    function deleteNote(noteId) {
+      const notes = (boardDoc.data && boardDoc.data.notes) || [];
+      const idx = notes.findIndex((n) => n.id === noteId);
+      if (idx < 0) return;
+      const old = notes[idx];
+      // json0: suppression d’un élément de tableau => ld (old value)
+      boardDoc.submitOp([{ p: ["notes", idx], ld: old }], (err) => {
+        if (err) console.warn("[board] delete error:", err);
+      });
+    }
+
+    function autoGrowNoteHeight(noteEl, textEl) {
+      // calcule une hauteur qui englobe tout le texte + padding de la note (8+8)
+      const contentH = Math.max(MIN_H, (textEl.scrollHeight || 0) + 16);
+      noteEl.style.height = `${contentH}px`;
+
+      // agrandit la zone si on touche le bas
+      const top = parseInt(noteEl.style.top || "0", 10);
+      const bottom = top + contentH + PADDING_BOTTOM;
+      const currentMin = parseInt(
+        getComputedStyle(notesLayer).minHeight || "0",
+        10
+      );
+      if (bottom > currentMin) {
+        notesLayer.style.minHeight = `${bottom}px`;
+        if (boardScroll) boardScroll.scrollTop = boardScroll.scrollHeight;
+      }
+    }
+
+    /** Supprime toutes les notes (avec confirmation) */
+    function clearAllNotes() {
+      const notes = (boardDoc.data && boardDoc.data.notes) || [];
+      if (notes.length === 0) return;
+
+      const ok = window.confirm(
+        `Supprimer ${notes.length} post-it${notes.length > 1 ? "s" : ""} ?`
+      );
+      if (!ok) return;
+
+      // json0: remplacer le tableau complet
+      boardDoc.submitOp([{ p: ["notes"], od: notes, oi: [] }], (err) => {
+        if (err) console.warn("[board] clear-all error:", err);
+        // optionnel: feedback
+        if (!err && window.Toastify) {
+          Toastify({
+            text: "Tous les post-its ont été supprimés.",
+            duration: 2500,
+            gravity: "top",
+            position: "center",
+            close: true,
+            backgroundColor: "#2b6cff",
+            stopOnFocus: true,
+          }).showToast();
+        }
+      });
+    }
+
+    // Sync initial + live ops
+    boardDoc.subscribe((err) => {
+      if (err) return console.error("[board] subscribe error", err);
+      if (!boardDoc.type) {
+        // doc créé côté serveur via ensureBoardDoc
+        // Le snapshot arrivera → on re-rendera à la prochaine op
+      }
+      renderAllNotes();
+
+      boardDoc.on("op", (_ops, _src) => {
+        // simple et robuste : re-render complet
+        renderAllNotes();
+      });
+    });
+
+    // Toolbar: outil Post-it
+    const btnToolNote = document.getElementById("btnToolNote");
+    if (btnToolNote && notesLayer) {
+      btnToolNote.addEventListener("click", () => {
+        // Ajoute une note ~au centre, puis pousse vers le bas si besoin
+        addNote(
+          undefined,
+          (notesLayer.scrollHeight || notesLayer.clientHeight) / 2 -
+            60 +
+            NEW_NOTE_OFFSET
+        );
+      });
+    }
+
+    // Toolbar: clear notes
+    const btnClearNotes = document.getElementById("btnClearNotes");
+
+    if (btnClearNotes) {
+      btnClearNotes.addEventListener("click", clearAllNotes);
+    }
+
     // --- Export helpers ---
     function download(filename, mime, textOrBlob) {
       const blob =

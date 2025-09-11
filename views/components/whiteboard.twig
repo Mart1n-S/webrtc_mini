@@ -1,5 +1,8 @@
 <section class="wb-board">
   <div class="wb-toolbar">
+    <button class="tbtn" data-tool="note" id="btnToolNote">🗒️ Post-it</button>
+    <button class="tbtn tbtn--danger" id="btnClearNotes">🗑️ Tout supprimer</button>
+    <div class="spacer"></div>
     <button class="tbtn tbtn--primary" id="btnShare">Partager le lien</button>
 
     <div class="spacer"></div>
@@ -20,5 +23,6 @@
   <div id="board" class="wb-canvas" tabindex="0" aria-label="Whiteboard">
     <!-- Éditeur OT (Quill) -->
     <div id="editor"></div>
+    <div id="notesLayer" class="wb-notes-layer"></div>
   </div>
 </section>

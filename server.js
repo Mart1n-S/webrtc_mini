@@ -24,6 +24,7 @@ const Room = require("./models/Room");
 
 // ShareDB (pour la partie tableau blanc collaboratif)
 const ShareDB = require("sharedb");
+const json0 = require("ot-json0");
 const richText = require("rich-text");
 const ShareDBMongo = require("sharedb-mongo");
 
@@ -49,6 +50,8 @@ const MONGODB_URI =
 // --- ShareDB (OT) backend ---
 // Enregistre le type riche (delta Quill compatible)
 ShareDB.types.register(richText.type);
+// Enregistre le type JSON (pour l'étape tableau blanc plus tard)
+ShareDB.types.register(json0.type);
 
 // Adapter Mongo pour ShareDB (utilise la même instance MongoDB que l'app)
 const shareDbMongo = ShareDBMongo(MONGODB_URI, { db: { name: "webrtcmini" } });
@@ -77,6 +80,32 @@ function ensureOTDoc(roomId) {
             return reject(err2);
           }
           resolve(true); // créé par nous
+        });
+      });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+// Pour l'étape tableau blanc plus tard (notes post-it)
+function ensureBoardDoc(roomId) {
+  return new Promise((resolve, reject) => {
+    try {
+      const conn = shareDbBackend.connect();
+      const doc = conn.get("boards", roomId);
+      doc.fetch((err) => {
+        if (err) return reject(err);
+        if (doc.type) return resolve(false); // existe déjà
+        const initial = { notes: [], strokes: [] }; // strokes pour l'étape dessin plus tard
+        doc.create(initial, json0.type.name || "json0", (err2) => {
+          if (err2) {
+            const msg = String(err2.message || err2);
+            if (/created remotely|already exists/i.test(msg))
+              return resolve(false);
+            return reject(err2);
+          }
+          resolve(true);
         });
       });
     } catch (e) {
@@ -248,6 +277,7 @@ app.post("/api/rooms/new", async (req, res) => {
 
     await Room.create({ roomId: rid });
     await ensureOTDoc(rid);
+    await ensureBoardDoc(rid);
 
     // URL canonique pour l’hôte
     const url = `/room/${rid}?autojoin=1&host=1`;
@@ -276,6 +306,7 @@ app.get("/room/:roomId", async (req, res) => {
 
   try {
     await ensureOTDoc(roomId);
+    await ensureBoardDoc(roomId);
   } catch (e) {
     console.error("[ensureOTDoc] error:", e);
   }

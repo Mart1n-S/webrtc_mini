@@ -5,6 +5,7 @@ const ShareDB = require("sharedb");
 const ShareDBMongo = require("sharedb-mongo");
 const richText = require("rich-text");
 const WebSocketJSONStream = require("websocket-json-stream");
+const json0 = require("ot-json0");
 
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/webrtcmini";
@@ -13,6 +14,9 @@ console.log("[OT]  MONGODB_URI =", MONGODB_URI);
 
 // Enregistre le type OT "rich-text"
 ShareDB.types.register(richText.type);
+
+// Enregistre le type OT "json0"
+ShareDB.types.register(json0.type);
 
 // Backend ShareDB (même Mongo que ton app principale)
 const backend = new ShareDB({
