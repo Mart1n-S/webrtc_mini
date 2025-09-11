@@ -1,11 +1,24 @@
 <section class="wb-board">
-	<div class="wb-toolbar">
-		<button class="tbtn tbtn--primary" id="btnShare">Partager le lien</button>
-	</div>
+  <div class="wb-toolbar">
+    <button class="tbtn tbtn--primary" id="btnShare">Partager le lien</button>
 
-	<div
-		id="board" class="wb-canvas" tabindex="0" aria-label="Whiteboard">
-		<!-- Éditeur OT (Quill) -->
-		<div id="editor"></div>
-	</div>
+    <div class="spacer"></div>
+
+    <div class="wb-export">
+      <label class="wb-export__label" for="selExportFmt">Exporter</label>
+      <select id="selExportFmt" class="tbtn tbtn--select wb-export__select">
+        <option value="delta">Quill Delta (JSON)</option>
+        <option value="html">HTML</option>
+        <option value="md">Markdown (.md)</option>
+        <option value="txt">Texte (.txt)</option>
+        <option value="pdf">PDF</option>
+      </select>
+      <button id="btnExport" class="tbtn wb-export__btn">⭳ Exporter</button>
+    </div>
+  </div>
+
+  <div id="board" class="wb-canvas" tabindex="0" aria-label="Whiteboard">
+    <!-- Éditeur OT (Quill) -->
+    <div id="editor"></div>
+  </div>
 </section>

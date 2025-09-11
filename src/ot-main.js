@@ -177,6 +177,92 @@ function initOT(roomId, myId) {
     // Publier l'état initial (souvent null)
     publishLocalSelection(quill.getSelection());
     console.log("[OT] prêt (cursors on) pour", roomId, "id=", myId);
+
+    // --- Export helpers ---
+    function download(filename, mime, textOrBlob) {
+      const blob =
+        textOrBlob instanceof Blob
+          ? textOrBlob
+          : new Blob([textOrBlob], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
+    }
+
+    function exportNote(fmt) {
+      const base = `note_${roomId}`;
+      if (fmt === "delta") {
+        const delta = doc.data || quill.getContents();
+        download(
+          `${base}.delta.json`,
+          "application/json;charset=utf-8",
+          JSON.stringify(delta, null, 2)
+        );
+        return;
+      }
+      if (fmt === "html") {
+        // HTML “propre” (innerHTML du conteneur Quill)
+        const html = quill.root.innerHTML;
+        download(
+          `${base}.html`,
+          "text/html;charset=utf-8",
+          `<!doctype html>
+<html><head><meta charset="utf-8"><title>${base}</title></head><body>${html}</body></html>`
+        );
+        return;
+      }
+      if (fmt === "md") {
+        if (!window.TurndownService) {
+          alert(
+            "Turndown (Markdown) non chargé. Garde HTML/Delta/TXT ou ajoute le <script> CDN."
+          );
+          return;
+        }
+        const turndown = new window.TurndownService();
+        const md = turndown.turndown(quill.root.innerHTML);
+        download(`${base}.md`, "text/markdown;charset=utf-8", md);
+        return;
+      }
+      if (fmt === "txt") {
+        const txt = quill.getText(); // sans mise en forme
+        download(`${base}.txt`, "text/plain;charset=utf-8", txt);
+        return;
+      }
+      if (fmt === "pdf") {
+        if (!window.html2pdf) {
+          alert(
+            "html2pdf.js non chargé. Ajoute le <script> CDN ou choisis un autre format."
+          );
+          return;
+        }
+        // Utilise l’élément #editor directement
+        const opt = {
+          margin: 10,
+          filename: `${base}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["css", "legacy"] },
+        };
+        window.html2pdf().set(opt).from(quill.root).save();
+        return;
+      }
+      alert("Format d’export inconnu.");
+    }
+
+    // Bouton exporter
+    const btnExport = document.getElementById("btnExport");
+    const selFmt = document.getElementById("selExportFmt");
+    if (btnExport && selFmt) {
+      btnExport.addEventListener("click", () => exportNote(selFmt.value));
+    }
   });
 
   // Nettoyage présence à la fermeture

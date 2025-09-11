@@ -385,3 +385,26 @@ body {
     border-color: #2a2f3f;
     color: var(--text);
 }
+
+/* ===== Export controls (toolbar) ===== */
+.wb-export {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.wb-export__label {
+    opacity: .8;
+    font-size: 13px;
+}
+
+.tbtn--select {
+    padding: 6px 8px;
+    /* équivalent de l’ancien inline */
+    line-height: 1.2;
+}
+
+/* (optionnel) compacter le bouton Export pour l’aligner visuellement */
+.wb-export__btn {
+    padding: 6px 10px;
+}
