@@ -458,23 +458,52 @@ a=candidate:842163049 1 udp 1677729535 203.0.113.5 53624 typ srflx raddr 192.168
 ## Arborescence minimale
 
 ```txt
-.
-├─ server.js
-├─ ot-server.js
-├─ views/
-│  ├─ workspace.twig
-│  └─ components/
-│     ├─ whiteboard.twig
-│     └─ call.twig
-├─ public/
-│  └─ assets/
-│     └─ js/
-│        ├─ landing.js
-│        ├─ workspace.js
-│        └─ app.js
-├─ src/
-│  └─ ot-main.js
-└─ (build) /assets/vite/ot-main.js  ← généré par Vite
+├── .github
+    └── diagram_WEBRTC.png
+├── .gitignore
+├── README.md
+├── models
+    └── Room.js
+├── ot-server.js
+├── package-lock.json
+├── package.json
+├── public
+    └── assets
+    │   ├── css
+    │       ├── landing.css
+    │       └── style.css
+    │   ├── images
+    │       ├── icon.svg
+    │       └── icons
+    │       │   ├── mic-circle-outline.svg
+    │       │   ├── mic-off-circle-outline.svg
+    │       │   ├── phone-off.svg
+    │       │   ├── videocam-off-outline.svg
+    │       │   └── videocam-outline.svg
+    │   ├── js
+    │       ├── app.js
+    │       ├── landing.js
+    │       └── workspace.js
+    │   └── vite
+    │       ├── assets
+    │           └── ot-main.css
+    │       ├── ot-main.js
+    │       └── ot-main.js.map
+├── server.js
+├── src
+    └── ot-main.js
+├── views
+    ├── base.twig
+    ├── components
+    │   ├── call.twig
+    │   └── whiteboard.twig
+    ├── landing.twig
+    ├── macros
+    │   └── cards.twig
+    ├── partials
+    │   └── remote-template.twig
+    └── workspace.twig
+└── vite.config.js
 ```
 
 ---
